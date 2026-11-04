@@ -1,3 +1,7 @@
+JIGSAWS results pending dataset access; real results currently on Daphnet Freezing of Gait.
+
+[![tests](https://github.com/ZeynepHusnaKocacenk/realtime-surgical-gesture-jigsaws/actions/workflows/tests.yml/badge.svg)](https://github.com/ZeynepHusnaKocacenk/realtime-surgical-gesture-jigsaws/actions/workflows/tests.yml)
+
 # From Offline to the Operating Room: Real-Time Surgical Gesture and Skill Recognition on JIGSAWS
 
 Most surgical gesture recognition results on JIGSAWS are reported **offline**: the model sees the
@@ -44,7 +48,7 @@ mean of frame features, so they differ only in their temporal backbone.
 
 | Model | Sees the future? | How it runs live |
 |---|---|---|
-| **TCN-causal** | No | Dilated causal convolutions; re-runs only on its receptive field per frame |
+| **TCN-causal** | No | Dilated causal convolutions with per-layer caches; one new time step per layer per frame |
 | **LSTM** (uni-directional) | No | Carries its hidden state; constant cost per frame |
 | **TCN-acausal** | Yes (centred kernels) | Must be re-run on the full history |
 | **BiLSTM** | Yes (backward pass) | Must be re-run on the full history |
@@ -52,6 +56,15 @@ mean of frame features, so they differ only in their temporal backbone.
 The TCN follows the single-stage MS-TCN design (Farha & Gall, 2019): dilated residual layers with a
 temporal smoothing loss that reduces over-segmentation. Gesture recognition and skill assessment are
 learned jointly.
+
+### Efficient streaming for the causal TCN
+`TCN.stream_step` does not re-run the network on a window of past frames. Each dilated layer keeps a
+cache of its last `(kernel-1)*dilation` inputs (zeros at the start, which is exactly the causal zero
+padding of the offline pass). A new frame computes **one** new time step per layer from that cache,
+so the work per frame is a fixed number of multiply-accumulates: it grows linearly with depth, not
+with the receptive field (which doubles with every layer), and it does not depend on how long the
+procedure has run. `tests/test_pipeline.py` checks that the streamed outputs equal the offline pass
+and that the per-frame cost is identical at every frame.
 
 ### Offline vs. online evaluation
 * **Offline:** each model labels a trial after seeing all of it.
@@ -84,12 +97,17 @@ Figures produced:
 
 ## Running it
 
+Streaming demo (**SYNTHETIC DATA, pipeline demo, not a result**): `python demo_stream.py` trains a
+small causal TCN on generated data, streams one held-out trial frame by frame, and prints the
+predicted and true gesture, per-frame latency, and how many frames stayed within the 100 ms budget.
+
 ```bash
 pip install -r requirements.txt
-python -m pytest -q tests                     # 10 correctness tests, about 10 s
+python -m pytest -q tests                     # 11 correctness tests, about 10 s
 
 # Pipeline check without the dataset: generates mock data in the exact JIGSAWS file layout.
-# These numbers are meaningless; they only show that everything runs.
+# SYNTHETIC DATA, pipeline demo, not a result: these numbers are meaningless, they only show
+# that everything runs.
 python main.py --synthetic --epochs 15 --max-folds 3
 
 # Real JIGSAWS (one task folder, all 8 LOUO folds)

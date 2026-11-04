@@ -94,3 +94,29 @@ def test_padding_does_not_change_outputs(data):
                 n = len(ds[i][0])
                 if model.causal or n == X.shape[1]:
                     assert torch.allclose(g_b[i, :n], g_i[0], atol=1e-4), name
+
+
+def test_tcn_stream_cost_is_constant_per_frame():
+    """Per-layer caches: each frame computes one new step per layer, so the work per frame
+    is the same at frame 1 and frame 500 and does not scale with the receptive field."""
+    torch.manual_seed(0)
+    macs = {}
+    for layers in (4, 8):
+        model = build_model("TCN-causal", n_features=10, n_gestures=5, hidden=16, tcn_layers=layers).eval()
+        model.stream_reset()
+        seen = set()
+        for t in range(300):
+            model.stream_step(torch.randn(10))
+            seen.add(model.stream_macs)
+        assert len(seen) == 1                            # identical cost at every frame
+        macs[layers] = seen.pop()
+        # every cache holds exactly (kernel-1)*dilation inputs
+        for layer, cache in zip(model.layers, model._caches):
+            assert cache.shape[1] == (layer.kernel - 1) * layer.dilation
+        # re-running the receptive-field window would cost ~rf times more
+        rf_cost = model.receptive_field * (macs[layers] - 10 * 16)
+        assert macs[layers] * 10 < rf_cost
+    # cost grows linearly with depth, while the receptive field grows exponentially
+    assert macs[8] < 3 * macs[4]
+    rf4, rf8 = 1 + 2 * (2 ** 4 - 1), 1 + 2 * (2 ** 8 - 1)
+    assert rf8 > 15 * rf4

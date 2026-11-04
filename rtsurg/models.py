@@ -17,7 +17,6 @@ processes one frame at a time; tests check it reproduces the offline outputs exa
 """
 from __future__ import annotations
 
-from collections import deque
 from typing import Optional, Tuple
 
 import torch
@@ -105,21 +104,40 @@ class TCN(SeqModel):
         return h.transpose(1, 2)
 
     def stream_reset(self):
+        """Per-layer caches: layer i keeps its last (kernel-1)*dilation inputs (zeros at start,
+        which is exactly the causal zero padding of the offline pass)."""
         if not self.causal:
             return super().stream_reset()
-        self._buf: deque = deque(maxlen=self.receptive_field)
+        self._caches = [torch.zeros(l.conv.in_channels, (l.kernel - 1) * l.dilation)
+                        for l in self.layers]
         self._sum, self._n = None, 0
+        self.stream_macs = 0            # multiply-accumulates of the most recent step
 
     @torch.no_grad()
     def stream_step(self, x_t):
-        """x_t: [F]. Re-runs the TCN on the last ``receptive_field`` frames, which is exactly
-        the information the offline causal output at this frame depends on."""
+        """x_t: [F]. Computes ONE new time step per layer from that layer's cache, so the cost
+        per frame is constant (kernel taps per layer) and independent of the receptive field's
+        length and of how long the procedure has run. Outputs equal the offline causal pass."""
         if not self.causal:
             return super().stream_step(x_t)
-        self._buf.append(x_t)
-        window = torch.stack(tuple(self._buf)).unsqueeze(0)       # [1, w, F]
-        h_t = self.features(window)[0, -1]
-        return self._stream_pool(h_t)
+        h = self.inp(x_t.view(1, -1, 1))[0, :, 0]                      # [C]
+        macs = self.inp.in_channels * self.inp.out_channels
+        for layer, cache in zip(self.layers, self._caches):
+            w = layer.conv.weight                                        # [C_out, C_in, k]
+            k, d = layer.kernel, layer.dilation
+            # taps at t-(k-1)d, ..., t-d (from cache) and t (current input)
+            taps = [cache[:, j * d] for j in range(k - 1)] + [h]
+            y = layer.conv.bias.clone()
+            for j, tap in enumerate(taps):
+                y = y + w[:, :, j] @ tap
+            y = F.relu(y)
+            o = layer.out.weight[:, :, 0] @ y + layer.out.bias
+            macs += (k + 1) * w.shape[0] * w.shape[1]
+            if k > 1:                                                     # slide the cache
+                cache.copy_(torch.cat([cache[:, 1:], h.unsqueeze(1)], dim=1))
+            h = h + o
+        self.stream_macs = macs
+        return self._stream_pool(h)
 
 
 # ---------------------------------------------------------------------------------------
