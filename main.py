@@ -33,6 +33,8 @@ FRACTIONS = [0.1, 0.25, 0.5, 0.75, 1.0]
 
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--dataset", choices=["jigsaws", "daphnet"], default="jigsaws",
+                   help="daphnet: --data-dir points at the folder holding SxxRyy.txt files")
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--data-dir", type=str, help="JIGSAWS task folder, e.g. .../JIGSAWS/Suturing")
     src.add_argument("--synthetic", action="store_true", help="generate mock data in JIGSAWS format")
@@ -51,6 +53,18 @@ def parse_args():
                    help="device for latency profiling (cpu mimics an embedded OR workstation)")
     p.add_argument("--out", type=str, default="results")
     p.add_argument("--seed", type=int, default=0)
+    d = p.add_argument_group("Daphnet options")
+    d.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    d.add_argument("--workers", type=int, default=3, help="parallel processes (one per seed)")
+    d.add_argument("--n-val", type=int, default=2, help="validation subjects per fold")
+    d.add_argument("--window", type=int, default=256, help="training window (frames)")
+    d.add_argument("--online-history-s", type=float, default=10.0,
+                   help="history an acausal model may re-process when run online")
+    d.add_argument("--daphnet-hidden", type=int, default=32)
+    d.add_argument("--daphnet-tcn-layers", type=int, default=6)
+    d.add_argument("--daphnet-epochs", type=int, default=12)
+    d.add_argument("--daphnet-lr", type=float, default=2e-3)
+    d.add_argument("--daphnet-downsample", type=int, default=2, help="64 Hz / k")
     p.add_argument("--verbose", action="store_true")
     return p.parse_args()
 
@@ -62,6 +76,19 @@ def mean_std(values):
 
 def main():
     args = parse_args()
+    if args.dataset == "daphnet":
+        from rtsurg.fog_report import write_daphnet_report
+        from rtsurg.fog_run import run_daphnet
+        if args.synthetic or not args.data_dir:
+            raise SystemExit("--dataset daphnet needs --data-dir (real Daphnet files); no synthetic fallback")
+        if args.out == "results":
+            args.out = "results/daphnet"
+        args.epochs, args.lr, args.downsample = args.daphnet_epochs, args.daphnet_lr, args.daphnet_downsample
+        args.hidden, args.tcn_layers = args.daphnet_hidden, args.daphnet_tcn_layers
+        args.recompute_stride = args.recompute_stride if args.recompute_stride != 5 else 8
+        res = run_daphnet(args)
+        write_daphnet_report(res, Path(args.out))
+        return
     torch.manual_seed(args.seed); np.random.seed(args.seed)
     out = Path(args.out); (out / "figures").mkdir(parents=True, exist_ok=True)
 

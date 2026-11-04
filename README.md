@@ -95,6 +95,78 @@ Figures produced:
 * `gesture_timeline.png`: ground truth vs. online predictions on a held-out surgeon
 * `early_skill.png`: skill accuracy vs. fraction of the trial observed
 
+## Results: Daphnet Freezing of Gait
+
+Real data: the Daphnet dataset (Bachlin et al., 2010; UCI), 10 Parkinson's patients, three 3-axis
+accelerometers (ankle, upper leg, trunk), 64 Hz. These are the results this project currently has;
+JIGSAWS results are pending dataset access. Full tables are in
+[`results/daphnet/results.md`](results/daphnet/results.md), raw per-fold numbers in
+`results/daphnet/results.json`.
+
+### Protocol
+* **Data:** frames annotated "not part of experiment" are dropped, and recordings are split wherever
+  they were interrupted, so no sequence spans a gap. Signals are averaged in pairs to 32 Hz (a causal
+  operation), giving a **31.3 ms** frame budget. Normalisation uses the training subjects only.
+* **Leave-one-subject-out, with validation subjects.** Each fold holds out one subject. Two further
+  subjects (that have freezes, drawn by seed) are held out of the training set as **validation
+  subjects**. They are used for epoch selection (best validation PR-AUC) and for **every decision
+  threshold**; the test subject is never used for any choice. Test subjects with no freeze episodes
+  (S04, S10) are skipped, so 8 test folds remain; S04 and S10 are still used for training.
+* **Seeds:** 3 (0, 1, 2). The validation subjects, initialisation and data order change with the seed.
+  Event metrics are pooled over the 8 test subjects within a seed and reported as mean ± std across
+  seeds. Sensitivity, specificity and PR-AUC are per fold, mean ± std across seeds and folds.
+* **Models:** the four models from above (hidden size 32, 6 TCN layers, 12 epochs, class-weighted
+  cross-entropy on 8 s windows). Online acausal models are re-run on the last 10 s every 250 ms.
+* **Non-learned baseline:** the Freeze Index (Moore et al., 2008): power in 3 to 8 Hz divided by power
+  in 0.5 to 3 Hz on the ankle vertical axis, over a causal 4 s window, thresholded. The FI threshold
+  and a minimum-power threshold are chosen on the validation subjects.
+* **Metrics.** Freeze frames are the minority class (**12.8%** of test frames; 237 episodes), so frame
+  accuracy is not the headline. A *predicted event* is a run of positive frames, merging runs less than
+  1 s apart. An episode is *detected* if any positive frame falls inside it (recall); a predicted event
+  is *correct* only if at least half of its frames are freeze (precision), so an always-on detector
+  scores zero precision. Also reported: sensitivity, specificity, PR-AUC, false alarms per minute, and
+  detection delay (onset to first positive frame).
+
+### Online results (deployable setting; mean ± std across 3 seeds)
+
+| Model | Causal | Event precision | Event recall | Event F1 | PR-AUC | Median onset delay (ms) | False alarms / min | Latency median (ms) |
+|---|---|---|---|---|---|---|---|---|
+| Freeze Index (baseline) | yes | 47.5 ± 2.6 | 57.8 ± 2.8 | 52.1 ± 2.6 | 0.265 ± 0.122 | 1094 | 0.68 ± 0.04 | n/a |
+| TCN-causal | yes | 38.3 ± 3.4 | 65.5 ± 8.4 | 48.1 ± 3.9 | 0.528 ± 0.167 | 250 | 1.11 ± 0.07 | 0.49 |
+| TCN-acausal | no | 39.9 ± 8.3 | 61.0 ± 6.2 | 47.5 ± 5.9 | 0.520 ± 0.177 | 359 | 1.00 ± 0.18 | 3.08 |
+| LSTM | yes | 17.6 ± 2.3 | 57.0 ± 2.1 | 26.7 ± 2.6 | 0.376 ± 0.186 | 0 | 1.63 ± 0.16 | 0.16 |
+| BiLSTM | no | 25.2 ± 2.4 | 61.6 ± 6.8 | 35.7 ± 3.4 | 0.363 ± 0.195 | 156 | 1.60 ± 0.19 | 17.4 |
+
+Offline vs. online event F1: TCN-causal 48.1 vs 48.1 (identical by construction), TCN-acausal 48.0 vs
+47.5, LSTM 26.7 vs 26.7, BiLSTM 31.8 vs 35.7. Latency is the median per update at 60 s of elapsed time
+for acausal models re-run on the whole history (the causal models do not depend on elapsed time); the
+online acausal evaluation above re-runs them on a bounded 10 s window instead (TCN-acausal 1.5 ms,
+BiLSTM 3.0 ms per update at 10 s).
+
+### What the results say
+* The **causal TCN has the best PR-AUC** (0.53, about twice the Freeze Index's 0.27) and detects
+  freeze onsets about **0.8 s earlier** than the Freeze Index (median 250 ms vs 1094 ms), at 0.5 ms
+  per frame, constant as the recording gets longer.
+* At the validation-selected operating points, its **event F1 (48.1 ± 3.9) is not better than the
+  Freeze Index (52.1 ± 2.6)**: the learned model finds more episodes (recall 65.5% vs 57.8%) at the cost
+  of more false alarms (1.1 vs 0.7 per minute). With 3 seeds the difference is within noise.
+* The causal TCN loses nothing when restricted to the past; the LSTM variants are clearly worse on
+  this task.
+* Results vary a lot between subjects (per-subject event F1 from 14 to 70 for the causal TCN), as in
+  the literature; see the per-subject tables in `results/daphnet/results.md`.
+
+Figures: `results/daphnet/figures/offline_vs_online.png`, `per_subject_f1.png`,
+`latency_vs_history.png`, `recall_vs_false_alarms.png`.
+
+### Limitations
+* Small cohort (10 patients, 8 evaluable), recorded in a lab with scripted walking tasks designed to
+  provoke freezes. Results do not transfer to free-living use and are **not clinical claims**.
+* Models are small and trained for a fixed 12 epochs with no hyper-parameter search, so the learned
+  models may be under-tuned; the event metrics depend on the merge-gap and the 50% rule above.
+* Three seeds give only a rough estimate of variability, and the validation subjects change with the
+  seed. Latency was measured on a shared CPU container.
+* Detection delay is measured only for detected episodes.
+
 ## Running it
 
 Streaming demo (**SYNTHETIC DATA, pipeline demo, not a result**): `python demo_stream.py` trains a
@@ -103,12 +175,15 @@ predicted and true gesture, per-frame latency, and how many frames stayed within
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q tests                     # 11 correctness tests, about 10 s
+python -m pytest -q tests                     # correctness tests, about 1 min
 
 # Pipeline check without the dataset: generates mock data in the exact JIGSAWS file layout.
 # SYNTHETIC DATA, pipeline demo, not a result: these numbers are meaningless, they only show
 # that everything runs.
 python main.py --synthetic --epochs 15 --max-folds 3
+
+# Daphnet (folder holding the SxxRyy.txt files; the data is not included in this repository)
+python main.py --dataset daphnet --data-dir /path/to/dataset_fog_release/dataset
 
 # Real JIGSAWS (one task folder, all 8 LOUO folds)
 python main.py --data-dir /path/to/JIGSAWS/Suturing --epochs 60 --verbose
@@ -130,6 +205,10 @@ rtsurg/
   train.py       joint gesture + skill training with temporal smoothing loss
   metrics.py     frame accuracy, edit score, F1@k, detection delay
   benchmark.py   offline vs. online evaluation, early skill curve, latency profiler
+  daphnet.py     Daphnet loader, leave-one-subject-out splits with validation subjects, Freeze Index
+  fog.py         event-level metrics, threshold selection, windowed training, online evaluation
+  fog_run.py     Daphnet benchmark driver (3 seeds in parallel)
+  fog_report.py  Daphnet tables and figures
   plots.py       figures
 main.py          runs the full LOUO benchmark and writes tables and figures
 tests/           loader, leakage, metric, causality and streaming-equivalence tests

@@ -1,0 +1,36 @@
+[data] Daphnet: 35 segments, subjects ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10'], 570400 frames at 32 Hz (frame budget 31.2 ms)
+[seed 0] test S01 val ['S07', 'S08'] | FI f1  41.6 | TCN-causal off  35.5 on  35.5 (65s) | TCN-acausal off  56.3 on  53.0 (77s) | LSTM off  12.5 on  12.5 (13s) | BiLSTM off  16.2 on   6.4 (41s)
+[seed 2] test S01 val ['S03', 'S08'] | FI f1  39.8 | TCN-causal off   0.0 on   0.0 (72s) | TCN-acausal off   0.0 on   0.0 (73s) | LSTM off  11.8 on  11.8 (13s) | BiLSTM off   7.4 on   8.6 (38s)
+[seed 1] test S01 val ['S05', 'S06'] | FI f1  35.1 | TCN-causal off   7.4 on   7.4 (61s) | TCN-acausal off   0.0 on   5.6 (88s) | LSTM off   5.5 on   5.5 (12s) | BiLSTM off   2.8 on   8.5 (39s)
+[seed 0] test S02 val ['S03', 'S05'] | FI f1  66.2 | TCN-causal off  69.7 on  69.7 (45s) | TCN-acausal off  75.5 on  74.6 (57s) | LSTM off  37.9 on  37.9 (13s) | BiLSTM off  47.6 on  68.9 (40s)
+[seed 1] test S02 val ['S01', 'S08'] | FI f1  36.4 | TCN-causal off  72.4 on  72.4 (49s) | TCN-acausal off  79.8 on  78.1 (59s) | LSTM off  65.7 on  65.7 (14s) | BiLSTM off  75.8 on  66.4 (37s)
+[seed 2] test S02 val ['S03', 'S05'] | FI f1  66.2 | TCN-causal off  69.0 on  69.0 (43s) | TCN-acausal off  77.2 on  65.7 (68s) | LSTM off  51.2 on  51.2 (13s) | BiLSTM off  69.9 on  65.7 (40s)
+[seed 1] test S03 val ['S07', 'S09'] | FI f1  51.0 | TCN-causal off  63.1 on  63.1 (44s) | TCN-acausal off  71.4 on  65.6 (60s) | LSTM off  40.7 on  40.7 (13s) | BiLSTM off  60.7 on  56.5 (39s)
+[seed 2] test S03 val ['S01', 'S05'] | FI f1  43.3 | TCN-causal off  62.2 on  62.2 (42s) | TCN-acausal off  31.2 on  55.1 (64s) | LSTM off  23.5 on  23.5 (12s) | BiLSTM off  21.1 on  58.4 (40s)
+[seed 0] test S03 val ['S01', 'S09'] | FI f1  63.3 | TCN-causal off  61.9 on  61.9 (50s) | TCN-acausal off  61.2 on  52.7 (69s) | LSTM off  21.1 on  21.1 (12s) | BiLSTM off  24.6 on  35.3 (40s)
+[seed 1] test S05 val ['S02', 'S09'] | FI f1  60.7 | TCN-causal off  55.0 on  55.0 (46s) | TCN-acausal off  38.3 on  42.9 (61s) | LSTM off  14.5 on  14.5 (13s) | BiLSTM off  19.1 on  40.7 (39s)
+[seed 0] test S05 val ['S07', 'S09'] | FI f1  56.6 | TCN-causal off  63.2 on  63.2 (45s) | TCN-acausal off  57.4 on  65.3 (65s) | LSTM off  45.4 on  45.4 (13s) | BiLSTM off  31.2 on  35.0 (39s)
+[seed 2] test S05 val ['S06', 'S08'] | FI f1  61.5 | TCN-causal off  57.8 on  57.8 (51s) | TCN-acausal off  51.3 on  48.5 (70s) | LSTM off  22.3 on  22.3 (13s) | BiLSTM off  41.5 on  46.4 (38s)
+[seed 1] test S06 val ['S02', 'S08'] | FI f1  31.5 | TCN-causal off  21.1 on  21.1 (49s) | TCN-acausal off  43.3 on  26.0 (62s) | LSTM off   8.0 on   8.0 (14s) | BiLSTM off  11.6 on   8.7 (39s)
+[seed 0] test S06 val ['S05', 'S07'] | FI f1  22.2 | TCN-causal off  30.2 on  30.2 (44s) | TCN-acausal off  16.0 on  14.3 (64s) | LSTM off  11.7 on  11.7 (13s) | BiLSTM off   8.0 on   9.9 (39s)
+[seed 2] test S06 val ['S02', 'S08'] | FI f1  31.5 | TCN-causal off  32.0 on  32.0 (62s) | TCN-acausal off  22.3 on  30.2 (78s) | LSTM off  14.0 on  14.0 (13s) | BiLSTM off  24.5 on  29.4 (37s)
+[seed 1] test S07 val ['S03', 'S06'] | FI f1   0.0 | TCN-causal off  62.2 on  62.2 (43s) | TCN-acausal off  54.8 on  37.4 (57s) | LSTM off  20.5 on  20.5 (12s) | BiLSTM off  12.5 on  22.3 (38s)
+[seed 0] test S07 val ['S06', 'S09'] | FI f1  45.0 | TCN-causal off  19.4 on  19.4 (44s) | TCN-acausal off  19.0 on  22.6 (62s) | LSTM off  13.7 on  13.7 (12s) | BiLSTM off  16.9 on  14.4 (37s)
+[seed 2] test S07 val ['S01', 'S05'] | FI f1  15.4 | TCN-causal off   6.7 on   6.7 (44s) | TCN-acausal off  10.1 on   8.5 (56s) | LSTM off   1.9 on   1.9 (12s) | BiLSTM off   0.0 on   3.2 (39s)
+[seed 1] test S08 val ['S01', 'S09'] | FI f1  32.4 | TCN-causal off   0.0 on   0.0 (49s) | TCN-acausal off   0.0 on   0.0 (59s) | LSTM off  50.6 on  50.6 (13s) | BiLSTM off  33.8 on  44.0 (38s)
+[seed 0] test S08 val ['S05', 'S09'] | FI f1  45.5 | TCN-causal off  40.0 on  40.0 (48s) | TCN-acausal off  40.0 on  53.5 (66s) | LSTM off  21.1 on  21.1 (13s) | BiLSTM off  12.5 on  45.3 (38s)
+[seed 2] test S08 val ['S02', 'S06'] | FI f1  33.3 | TCN-causal off  75.0 on  75.0 (60s) | TCN-acausal off  46.8 on  49.1 (67s) | LSTM off  41.8 on  41.8 (13s) | BiLSTM off  54.8 on  24.4 (37s)
+[seed 1] test S09 val ['S06', 'S07'] | FI f1  69.4 | TCN-causal off  25.8 on  25.8 (45s) | TCN-acausal off  25.8 on  31.2 (62s) | LSTM off   0.0 on   0.0 (12s) | BiLSTM off   0.0 on   0.0 (39s)
+[seed 0] test S09 val ['S06', 'S08'] | FI f1  64.9 | TCN-causal off  67.0 on  67.0 (47s) | TCN-acausal off  61.9 on  63.8 (65s) | LSTM off  33.0 on  33.0 (13s) | BiLSTM off  49.0 on  45.7 (37s)
+[seed 2] test S09 val ['S02', 'S05'] | FI f1  57.6 | TCN-causal off  57.1 on  57.1 (45s) | TCN-acausal off  59.9 on  56.8 (58s) | LSTM off  55.6 on  55.6 (12s) | BiLSTM off  36.3 on  64.2 (37s)
+Traceback (most recent call last):
+  File "/home/user/realtime-surgical-gesture-jigsaws/main.py", line 204, in <module>
+    main()
+    ~~~~^^
+  File "/home/user/realtime-surgical-gesture-jigsaws/main.py", line 90, in main
+    write_daphnet_report(res, Path(args.out))
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/realtime-surgical-gesture-jigsaws/rtsurg/fog_report.py", line 112, in write_daphnet_report
+    v = lat[m]["by_history"][str(int(s * rate))]
+        ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+KeyError: '320'

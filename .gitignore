@@ -1,4 +1,7 @@
-results/
+results/*
+!results/daphnet/
+results/daphnet/models/
+results/daphnet/results_partial.json
 __pycache__/
 *.pyc
 .pytest_cache/
