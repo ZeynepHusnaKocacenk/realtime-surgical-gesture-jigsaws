@@ -55,6 +55,8 @@ def parse_args():
     p.add_argument("--seed", type=int, default=0)
     d = p.add_argument_group("Daphnet options")
     d.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    d.add_argument("--robustness", action="store_true",
+                   help="calibration, fault robustness and abstention on the saved Daphnet models")
     d.add_argument("--workers", type=int, default=3, help="parallel processes (one per seed)")
     d.add_argument("--n-val", type=int, default=2, help="validation subjects per fold")
     d.add_argument("--window", type=int, default=256, help="training window (frames)")
@@ -86,6 +88,13 @@ def main():
         args.epochs, args.lr, args.downsample = args.daphnet_epochs, args.daphnet_lr, args.daphnet_downsample
         args.hidden, args.tcn_layers = args.daphnet_hidden, args.daphnet_tcn_layers
         args.recompute_stride = args.recompute_stride if args.recompute_stride != 5 else 8
+        if args.robustness:
+            from rtsurg.robust_report import write_robustness_report
+            from rtsurg.robust_run import run_robustness
+            if not (Path(args.out) / "models").exists():
+                raise SystemExit("no trained models found: run the Daphnet benchmark first")
+            write_robustness_report(run_robustness(args), Path(args.out))
+            return
         res = run_daphnet(args)
         write_daphnet_report(res, Path(args.out))
         return

@@ -167,6 +167,79 @@ Figures: `results/daphnet/figures/offline_vs_online.png`, `per_subject_f1.png`,
   seed. Latency was measured on a shared CPU container.
 * Detection delay is measured only for detected episodes.
 
+## Robustness and safe abstention
+
+Real Daphnet data, the same 96 trained models as above (3 seeds x 8 folds x 4 models), no retraining:
+`python main.py --dataset daphnet --robustness --data-dir <daphnet folder>`. Full tables:
+[`results/daphnet/robustness.md`](results/daphnet/robustness.md). Figures:
+`results/daphnet/figures/robustness.png` and `abstention.png`. Every choice (temperature, decision
+threshold, abstention threshold, Freeze Index thresholds) was made on the validation subjects of the
+fold, on clean data. Thresholds are **not** re-tuned for faulty data.
+
+**Calibration.** Temperature scaling is fitted on validation subjects (`rtsurg/calibration.py`).
+It lowers the negative log-likelihood on the test subjects (TCN-causal 0.421 to 0.372, LSTM 0.526 to
+0.446) but **does not reduce ECE**: TCN-causal 7.4% before, 8.4% after (std about 4.5 across folds);
+LSTM 12.9% to 12.5%. The fitted temperature varies a lot between folds (TCN-causal 2.6 ± 1.4), so
+what is learned on two validation subjects does not transfer reliably to a new patient. The models
+are over-confident on unseen subjects, and this calibration step only partly fixes it.
+
+**Sensor faults** (online recognition, test subjects only; drops hold the last frame, noise is Gaussian
+with std relative to each feature's training std, a stuck sensor repeats its value for 1 to 3 s,
+one event per 30 s of recording at random times). Freeze event F1, mean ± std over 3 seeds (the clean
+row uses the temperature-scaled threshold, so it differs slightly from the main table above):
+
+| Condition | Freeze Index | TCN-causal | TCN-acausal | LSTM | BiLSTM |
+|---|---|---|---|---|---|
+| clean | 52.1 ± 2.6 | 48.8 ± 4.2 | 47.8 ± 6.6 | 25.5 ± 2.6 | 36.3 ± 2.5 |
+| 20% dropped frames | 49.9 ± 2.5 | 48.7 ± 2.9 | 45.0 ± 5.4 | 27.5 ± 2.1 | 36.7 ± 0.8 |
+| noise 0.5x std | 36.2 ± 2.9 | 42.2 ± 1.9 | 40.5 ± 3.7 | 26.2 ± 1.2 | 32.5 ± 1.7 |
+| noise 1.0x std | 30.0 ± 1.8 | 35.5 ± 3.3 | 34.9 ± 0.6 | 27.0 ± 1.6 | 31.1 ± 3.7 |
+| sensor stuck 3 s | 51.0 ± 2.2 | 47.0 ± 3.8 | 46.2 ± 7.3 | 25.1 ± 2.6 | 35.9 ± 2.4 |
+
+* Dropped frames (up to 20%) and short stuck-sensor episodes (up to 3 s) change the results very little,
+  because the models integrate over several seconds.
+* **Noise is the real failure mode.** At 1.0x std, false alarms rise from 1.1 to 3.4 per minute for
+  TCN-causal (clean 256 false alarms, 758 at 1.0x std over the 8 test subjects). Recall appears to
+  rise because noise triggers alarms, so read it together with false alarms. The Freeze Index loses
+  22 F1 points at 1.0x noise, the causal TCN 13. The LSTM models are low to begin with and move little.
+  Missed freezes and false alarms for every condition are in the last table of `robustness.md`.
+
+**Abstention.** After temperature scaling, a frame whose top-class probability is below tau is
+"uncertain" and raises no alarm (tau from 0.5 to 0.9). For TCN-causal, tau 0.7 keeps 78% of frames,
+raises accuracy on those frames from 83% to 92.5%, and halves false alarms (1.14 to 0.49 per minute),
+but event recall falls from 66% to 40% (more missed freezes: 81 to 143 of 237). At tau 0.9 only 55%
+of frames get a decision and recall is 12%. Choosing tau on validation subjects (best event F1 with
+coverage of at least 80%) **selected tau 0.5 (no abstention) in all 24 TCN-causal runs and in most others**, so abstention is a way to
+trade missed freezes for fewer false alarms, not a free improvement. Whether that trade is acceptable
+is a clinical question this project does not answer.
+
+Limitations: faults are simulated, not recorded from failing sensors; the injection pattern (one stuck
+event per 30 s, independent frame drops) is one of many possible; and three seeds give rough error bars.
+
+## Deployment
+
+A design proposal, with **no clinical claims**: how a trained causal model could run on a wearable
+gateway. `python export.py --data-dir <daphnet folder>` exports each causal model as a single
+streaming step (new frame plus model state in, freeze logits plus new state out) to TorchScript and
+ONNX, quantises the ONNX model to dynamic int8, checks the outputs against the offline PyTorch pass
+(max absolute difference at most 2e-6 for fp32), and benchmarks CPU latency with one thread. Results:
+[`results/deployment.md`](results/deployment.md), figure `results/deployment_latency.png`.
+
+| TCN-causal (26.5k parameters) | Median ms / frame | Size (MB) | Event F1 (8 test subjects, seed 0) |
+|---|---|---|---|
+| PyTorch eager | 0.412 | 0.118 | not run |
+| TorchScript | 0.096 | 0.119 | not run |
+| ONNX Runtime fp32 | 0.042 | 0.115 | 52.6 |
+| ONNX Runtime dynamic int8 | 0.084 | 0.064 | 52.4 (-0.2) |
+
+Every runtime is far inside the 31.3 ms frame budget (ONNX Runtime is about 10x faster than eager
+PyTorch). int8 halves the model size at no measurable accuracy cost here (-0.2 F1 for TCN-causal, +0.2
+for the LSTM), but at this tiny model size it is **slower** than fp32 because of quantisation
+overhead, so its only benefit is memory. Proposed design: a ring buffer of the three sensors at 64 Hz,
+2:1 averaging to 32 Hz, one ONNX step per frame with state kept in memory, a decision threshold chosen
+on held-out patients, and the abstention and fault results above as the starting points for a safety
+analysis. None of this has been tested on a device or with patients.
+
 ## Running it
 
 Streaming demo (**SYNTHETIC DATA, pipeline demo, not a result**): `python demo_stream.py` trains a
@@ -209,6 +282,10 @@ rtsurg/
   fog.py         event-level metrics, threshold selection, windowed training, online evaluation
   fog_run.py     Daphnet benchmark driver (3 seeds in parallel)
   fog_report.py  Daphnet tables and figures
+  calibration.py temperature scaling and ECE
+  robustness.py  sensor-fault injectors
+  robust_run.py / robust_report.py  calibration, fault and abstention evaluation
+export.py        ONNX / TorchScript / int8 export and latency benchmark
   plots.py       figures
 main.py          runs the full LOUO benchmark and writes tables and figures
 tests/           loader, leakage, metric, causality and streaming-equivalence tests

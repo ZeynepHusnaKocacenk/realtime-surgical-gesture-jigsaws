@@ -1,5 +1,8 @@
 results/*
 !results/daphnet/
+!results/deployment.md
+!results/deployment.json
+!results/deployment_latency.png
 results/daphnet/models/
 results/daphnet/results_partial.json
 __pycache__/
