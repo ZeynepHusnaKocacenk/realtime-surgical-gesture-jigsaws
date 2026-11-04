@@ -1,0 +1,17 @@
+# Daphnet Freezing of Gait: leave-one-subject-out benchmark (real data, results already saved in results/daphnet)
+dataset: daphnet
+data_dir: data/daphnet            # folder holding the SxxRyy.txt files (not included in the repository)
+out: results/daphnet
+models: [TCN-causal, TCN-acausal, LSTM, BiLSTM]
+seeds: [0, 1, 2]
+n_val: 2                          # validation subjects per fold (thresholds and epoch selection)
+window: 256                       # training window, frames
+daphnet_epochs: 12
+daphnet_lr: 0.002
+daphnet_hidden: 32
+daphnet_tcn_layers: 6
+daphnet_downsample: 2             # 64 Hz / 2 = 32 Hz
+online_history_s: 10.0            # history an acausal model may re-process online
+recompute_stride: 8               # frames between re-computations of acausal models
+latency_device: cpu
+workers: 3

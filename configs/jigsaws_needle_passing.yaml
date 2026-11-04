@@ -1,0 +1,14 @@
+# JIGSAWS Needle_Passing: leave-one-user-out benchmark. Awaiting dataset access: nothing has been run for this task.
+dataset: jigsaws
+data_dir: data/JIGSAWS/Needle_Passing        # JIGSAWS is not redistributed; place the task folder here
+out: results/jigsaws_needle_passing
+models: [TCN-causal, TCN-acausal, LSTM, BiLSTM]
+seeds: [0, 1, 2]
+manipulators: [PSM_L, PSM_R]
+downsample: 3                    # 30 Hz / 3 = 10 Hz (100 ms budget)
+epochs: 40
+hidden: 64
+tcn_layers: 8
+lr: 0.001
+recompute_stride: 5
+latency_device: cpu

@@ -240,6 +240,25 @@ overhead, so its only benefit is memory. Proposed design: a ring buffer of the t
 on held-out patients, and the abstention and fault results above as the starting points for a safety
 analysis. None of this has been tested on a device or with patients.
 
+## Reproducing everything
+
+All settings live in YAML files in `configs/` (`daphnet.yaml`, `jigsaws_suturing.yaml`,
+`jigsaws_knot_tying.yaml`, `jigsaws_needle_passing.yaml`), each with the 3-seed default; results are mean
+and std across seeds and folds. `python main.py --config configs/daphnet.yaml --data-dir <folder>` runs one
+config (command-line flags override the file).
+
+```bash
+./run_all.sh        # every config, then rebuilds docs/index.html
+```
+
+`run_all.sh` does **not** re-train Daphnet when the saved results already come from the same config
+(`--skip-if-reproduced` compares seeds, epochs, model sizes and protocol settings with the saved
+`results.json` and only rebuilds tables and figures); JIGSAWS tasks whose data folder is missing are
+reported as "awaiting dataset access" and skipped. `make_report.py` turns `results/*` into the static page
+`docs/index.html` (tables plus all figures), published by `.github/workflows/pages.yml`. JIGSAWS sections of
+the page stay "awaiting dataset access" until a non-synthetic JIGSAWS run exists; synthetic runs are never
+shown as results. To publish, enable GitHub Pages once: repository Settings, Pages, Source = GitHub Actions.
+
 ## Running it
 
 Streaming demo (**SYNTHETIC DATA, pipeline demo, not a result**): `python demo_stream.py` trains a
@@ -282,9 +301,13 @@ rtsurg/
   fog.py         event-level metrics, threshold selection, windowed training, online evaluation
   fog_run.py     Daphnet benchmark driver (3 seeds in parallel)
   fog_report.py  Daphnet tables and figures
+  config.py      checks that saved results come from a given config
   calibration.py temperature scaling and ECE
   robustness.py  sensor-fault injectors
   robust_run.py / robust_report.py  calibration, fault and abstention evaluation
+configs/         YAML settings for every benchmark
+run_all.sh       runs every config and rebuilds the page
+make_report.py   results/* -> docs/index.html (GitHub Pages)
 export.py        ONNX / TorchScript / int8 export and latency benchmark
   plots.py       figures
 main.py          runs the full LOUO benchmark and writes tables and figures

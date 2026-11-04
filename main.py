@@ -32,10 +32,16 @@ FRACTIONS = [0.1, 0.25, 0.5, 0.75, 1.0]
 
 
 def parse_args():
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--config", type=str, default=None)
+    known, _ = pre.parse_known_args()
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--dataset", choices=["jigsaws", "daphnet"], default="jigsaws",
                    help="daphnet: --data-dir points at the folder holding SxxRyy.txt files")
-    src = p.add_mutually_exclusive_group(required=True)
+    p.add_argument("--config", type=str, default=None, help="YAML file of settings (see configs/)")
+    p.add_argument("--skip-if-reproduced", action="store_true",
+                   help="if saved results already come from this config, only rebuild tables and figures")
+    src = p.add_mutually_exclusive_group(required=False)
     src.add_argument("--data-dir", type=str, help="JIGSAWS task folder, e.g. .../JIGSAWS/Suturing")
     src.add_argument("--synthetic", action="store_true", help="generate mock data in JIGSAWS format")
     p.add_argument("--models", nargs="+", default=MODEL_NAMES, choices=MODEL_NAMES)
@@ -52,9 +58,7 @@ def parse_args():
     p.add_argument("--latency-device", type=str, default="cpu",
                    help="device for latency profiling (cpu mimics an embedded OR workstation)")
     p.add_argument("--out", type=str, default="results")
-    p.add_argument("--seed", type=int, default=0)
     d = p.add_argument_group("Daphnet options")
-    d.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     d.add_argument("--robustness", action="store_true",
                    help="calibration, fault robustness and abstention on the saved Daphnet models")
     d.add_argument("--workers", type=int, default=3, help="parallel processes (one per seed)")
@@ -67,8 +71,20 @@ def parse_args():
     d.add_argument("--daphnet-epochs", type=int, default=12)
     d.add_argument("--daphnet-lr", type=float, default=2e-3)
     d.add_argument("--daphnet-downsample", type=int, default=2, help="64 Hz / k")
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2],
+                   help="random seeds; results are mean and std across seeds and folds")
     p.add_argument("--verbose", action="store_true")
-    return p.parse_args()
+    if known.config:
+        import yaml
+        cfg = yaml.safe_load(open(known.config))
+        unknown = [k for k in cfg if not any(a.dest == k for a in p._actions)]
+        if unknown:
+            raise SystemExit(f"{known.config}: unknown setting(s) {unknown}")
+        p.set_defaults(**cfg)
+    args = p.parse_args()
+    if not (args.data_dir or args.synthetic):
+        p.error("one of --data-dir / --synthetic (or a config with data_dir) is required")
+    return args
 
 
 def mean_std(values):
@@ -88,21 +104,41 @@ def main():
         args.epochs, args.lr, args.downsample = args.daphnet_epochs, args.daphnet_lr, args.daphnet_downsample
         args.hidden, args.tcn_layers = args.daphnet_hidden, args.daphnet_tcn_layers
         args.recompute_stride = args.recompute_stride if args.recompute_stride != 5 else 8
+        from rtsurg.config import daphnet_results_match, robustness_results_match
         if args.robustness:
             from rtsurg.robust_report import write_robustness_report
             from rtsurg.robust_run import run_robustness
+            saved = Path(args.out) / "robustness.json"
+            if args.skip_if_reproduced and robustness_results_match(args, saved):
+                print(f"[reproduce] {saved} already comes from this config; rebuilding tables only")
+                write_robustness_report(json.load(open(saved)), Path(args.out))
+                return
             if not (Path(args.out) / "models").exists():
                 raise SystemExit("no trained models found: run the Daphnet benchmark first")
             write_robustness_report(run_robustness(args), Path(args.out))
             return
+        saved = Path(args.out) / "results.json"
+        if args.skip_if_reproduced and daphnet_results_match(args, saved):
+            print(f"[reproduce] {saved} already comes from this config (same seeds and settings); "
+                  "not re-training, rebuilding tables and figures only")
+            write_daphnet_report(json.load(open(saved)), Path(args.out))
+            return
         res = run_daphnet(args)
         write_daphnet_report(res, Path(args.out))
         return
-    torch.manual_seed(args.seed); np.random.seed(args.seed)
-    out = Path(args.out); (out / "figures").mkdir(parents=True, exist_ok=True)
+    out = Path(args.out)
+    if not args.synthetic and not Path(args.data_dir).exists():
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "AWAITING_DATASET").write_text(f"JIGSAWS folder {args.data_dir} not found: awaiting dataset access\n")
+        print(f"[jigsaws] {args.data_dir} not found: awaiting dataset access, nothing was run")
+        return
+    (out / "AWAITING_DATASET").unlink(missing_ok=True)
+    (out / "figures").mkdir(parents=True, exist_ok=True)
+    seeds = list(args.seeds)
+    torch.manual_seed(seeds[0]); np.random.seed(seeds[0])
 
     if args.synthetic:
-        task_dir = generate_synthetic_jigsaws(out / "synthetic_data", seed=args.seed)
+        task_dir = generate_synthetic_jigsaws(out / "synthetic_data", seed=seeds[0])
         print(f"[data] synthetic JIGSAWS-format data written to {task_dir}")
     else:
         task_dir = Path(args.data_dir)
@@ -114,29 +150,31 @@ def main():
     skills = {u: IDX_TO_SKILL[next(t.skill for t in data.trials if t.user == u)] for u in data.users}
     print(f"[data] skill per surgeon: {skills}")
 
-    cfg = TrainConfig(epochs=args.epochs, lr=args.lr, seed=args.seed)
+    cfg = TrainConfig(epochs=args.epochs, lr=args.lr, seed=seeds[0])
     folds = list(louo_splits(data))[: args.max_folds]
     per_model = {m: {"folds": [], "history": []} for m in args.models}
 
-    for user, train_trials, test_trials in folds:
-        norm = Normalizer.fit(train_trials)                     # train-fold statistics only
-        train_ds = TrialDataset(train_trials, norm, args.downsample)
-        test_ds = TrialDataset(test_trials, norm, args.downsample)
-        train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True, collate_fn=collate_padded)
-        test_dl = DataLoader(test_ds, batch_size=cfg.batch_size, shuffle=False, collate_fn=collate_padded)
-        print(f"\n[fold] held-out surgeon {user} ({skills[user]}): "
-              f"{len(train_trials)} train / {len(test_trials)} test trials")
-        for m in args.models:
-            t0 = time.time()
-            model = build_model(m, data.n_features, data.n_gestures, args.hidden, args.tcn_layers)
-            hist = train_model(model, train_dl, test_dl, cfg, verbose=args.verbose)
-            res = evaluate_fold(model, test_ds, cfg.device, frame_ms, args.recompute_stride, FRACTIONS)
-            res["user"] = user
-            per_model[m]["folds"].append(res)
-            per_model[m]["history"].append(hist.__dict__)
-            print(f"  {m:12s} offline acc {res['offline']['frame_acc']:5.1f} | online acc "
-                  f"{res['online']['frame_acc']:5.1f} edit {res['online']['edit']:5.1f} | "
-                  f"skill {res['skill_acc']:5.1f} | {time.time() - t0:5.1f}s")
+    for seed in seeds:
+        torch.manual_seed(seed); np.random.seed(seed); cfg.seed = seed
+        for user, train_trials, test_trials in folds:
+            norm = Normalizer.fit(train_trials)                     # train-fold statistics only
+            train_ds = TrialDataset(train_trials, norm, args.downsample)
+            test_ds = TrialDataset(test_trials, norm, args.downsample)
+            train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True, collate_fn=collate_padded)
+            test_dl = DataLoader(test_ds, batch_size=cfg.batch_size, shuffle=False, collate_fn=collate_padded)
+            print(f"\n[seed {seed}] [fold] held-out surgeon {user} ({skills[user]}): "
+                  f"{len(train_trials)} train / {len(test_trials)} test trials")
+            for m in args.models:
+                t0 = time.time()
+                model = build_model(m, data.n_features, data.n_gestures, args.hidden, args.tcn_layers)
+                hist = train_model(model, train_dl, test_dl, cfg, verbose=args.verbose)
+                res = evaluate_fold(model, test_ds, cfg.device, frame_ms, args.recompute_stride, FRACTIONS)
+                res["user"], res["seed"] = user, seed
+                per_model[m]["folds"].append(res)
+                per_model[m]["history"].append(hist.__dict__)
+                print(f"  {m:12s} offline acc {res['offline']['frame_acc']:5.1f} | online acc "
+                      f"{res['online']['frame_acc']:5.1f} edit {res['online']['edit']:5.1f} | "
+                      f"skill {res['skill_acc']:5.1f} | {time.time() - t0:5.1f}s")
 
     # ---- latency (architecture-dependent, independent of the fold) ------------------------
     history_s = [10, 30, 60, 120, 300]
@@ -165,7 +203,7 @@ def main():
 
     # ---- outputs -------------------------------------------------------------------------
     meta = {"task": data.trials[0].task, "synthetic": args.synthetic, "rate_hz": rate,
-            "folds": [u for u, _, _ in folds], "epochs": args.epochs, "torch": torch.__version__,
+            "folds": [u for u, _, _ in folds], "seeds": seeds, "epochs": args.epochs, "torch": torch.__version__,
             "platform": platform.platform(), "processor": platform.processor(),
             "recompute_stride": args.recompute_stride, "manipulators": args.manipulators}
     with open(out / "results.json", "w") as f:
