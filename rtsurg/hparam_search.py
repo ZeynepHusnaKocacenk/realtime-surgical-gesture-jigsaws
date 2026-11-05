@@ -127,12 +127,16 @@ def _figures(res: List[Dict], out: Path) -> None:
     fig.colorbar(im, ax=ax, fraction=0.046)
     ax = axes[1]
     rs = sorted(res, key=lambda r: r["val_pr_auc"])
-    ax.barh(range(len(rs)), [r["val_pr_auc"] for r in rs],
-            color=["#1f5fbf" if r is res[0] else "#9ecae1" for r in rs])
+    for k, r in enumerate(rs):                     # dot plot: an axis not starting at 0 is honest for dots
+        sel = r is res[0]
+        ax.plot([lo_x := min(q["val_pr_auc"] for q in rs) - 0.05, r["val_pr_auc"]], [k, k], color="#e4e3df", lw=1, zorder=1)
+        ax.scatter(r["val_pr_auc"], k, s=55 if sel else 35, color="#1f5fbf" if sel else "#7fa7d9", zorder=2,
+                   edgecolor="white", linewidth=1)
     ax.set_yticks(range(len(rs))); ax.set_yticklabels([r["name"].replace("_", " ") for r in rs], fontsize=6.5)
     lo = min(r["val_pr_auc"] for r in rs)
     ax.set_xlim(lo - 0.05, max(r["val_pr_auc"] for r in rs) + 0.02)
-    ax.set_xlabel("mean validation PR-AUC (8 folds)"); ax.set_title("All configurations (selected in dark blue)", fontsize=10)
+    ax.set_xlabel("mean validation PR-AUC (8 folds)"); ax.set_title("All 16 configurations (selected: largest dot)", fontsize=10)
+    ax.grid(axis="x", color="#e4e3df", lw=0.6)
     fig.tight_layout(); fig.savefig(out / "search.png", dpi=160); plt.close(fig)
 
 

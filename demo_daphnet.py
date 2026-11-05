@@ -3,7 +3,7 @@ causal TCN, as a wearable gateway would, then write a timeline figure, a session
 guard-railed session summary (``rtsurg/report_agent.py``).
 
     python demo_daphnet.py --data-dir data/daphnet                 # default: patient S05, shipped model
-    python demo_daphnet.py --data-dir data/daphnet --subject S02 --checkpoint results/daphnet_spectral/models/TCN-causal_seed0_S02.pt
+    python demo_daphnet.py --data-dir data/daphnet --subject S02 --checkpoint results/daphnet_tuned/models/TCN-causal_seed0_S02.pt
 
 The shipped checkpoint (``assets/``) was trained in the leave-one-subject-out benchmark WITHOUT the
 demo patient; its threshold and debounce were chosen on that fold's validation patients. The
@@ -72,7 +72,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", default=str(ROOT / "data" / "daphnet"))
     ap.add_argument("--subject", default="S05")
-    ap.add_argument("--checkpoint", default=str(ROOT / "assets" / "tcn_spectral_seed0_S05.pt"))
+    ap.add_argument("--checkpoint", default=str(ROOT / "assets" / "tcn_spectral_tuned_seed0_S05.pt"))
     ap.add_argument("--operating-point", default=None,
                     help="JSON with thr and min_dur (default: <checkpoint>.json, or results.json of the run)")
     ap.add_argument("--out", default=str(ROOT / "docs" / "demo"))

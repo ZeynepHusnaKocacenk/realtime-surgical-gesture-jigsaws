@@ -33,10 +33,12 @@ RUNS = [  # (results folder, model in that run, display name)
     ("daphnet_aug", "TCN-causal", "TCN-causal, deeper + noise aug."),
     ("daphnet_spectral_aug", "TCN-causal", "TCN-spectral + noise aug."),
     ("daphnet_spectral", "TCN-causal", "TCN-spectral"),
+    ("daphnet_tuned", "TCN-causal", "TCN-spectral, tuned"),
 ]
 # Causal TCN variants competing for "the" learned model. The winner is chosen by mean VALIDATION
 # PR-AUC (best epoch, validation patients only), never by test results.
-CANDIDATES = ["TCN-causal", "TCN-causal, deeper + noise aug.", "TCN-spectral + noise aug.", "TCN-spectral"]
+CANDIDATES = ["TCN-causal", "TCN-causal, deeper + noise aug.", "TCN-spectral + noise aug.", "TCN-spectral",
+              "TCN-spectral, tuned"]
 MODES = [("online", "threshold"), ("online_pp", "threshold+debounce")]
 
 

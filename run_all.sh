@@ -18,10 +18,10 @@ if [ -d "$DAPHNET_DIR" ] || [ -f results/daphnet/results.json ]; then
     python export.py --data-dir "$DAPHNET_DIR"
   fi
   # causal TCN variants (same seeds, folds and validation patients); fog_summary selects one by validation PR-AUC
-  for v in spectral spectral_aug aug; do
+  for v in spectral spectral_aug aug tuned; do
     python main.py --config "configs/daphnet_$v.yaml" --data-dir "$DAPHNET_DIR" --skip-if-reproduced
   done
-  for v in spectral spectral_aug; do
+  for v in spectral spectral_aug tuned; do
     python main.py --config "configs/daphnet_$v.yaml" --data-dir "$DAPHNET_DIR" --robustness --skip-if-reproduced
   done
   python -m rtsurg.fog_summary          # headline table with bootstrap CIs and paired tests

@@ -2,7 +2,7 @@
 
 Online (deployable) setting, 8 test subjects x 3 seeds. Point estimate = pooled over test subjects within a seed, mean over seeds. **[95% CI]** = percentile bootstrap over test subjects (2000 resamples of the 8 patients; the patient is the unit of independence). PR-AUC = mean over subjects of the per-subject value (mean over seeds). *Strict* F1 uses one-to-one event matching (`event_counts(strict=True)`), a sensitivity check of the event definition. Every threshold and debounce was chosen on validation subjects only.
 
-**Model selection.** Among the causal TCN variants, the one with the highest mean validation PR-AUC (validation patients only) is selected: **TCN-spectral** (mean validation PR-AUC: TCN-causal 0.462, TCN-causal, deeper + noise aug. 0.486, TCN-spectral + noise aug. 0.589, TCN-spectral 0.615). Test results played no part in this choice; the other variants are shown as ablations.
+**Model selection.** Among the causal TCN variants, the one with the highest mean validation PR-AUC (validation patients only) is selected: **TCN-spectral, tuned** (mean validation PR-AUC: TCN-causal 0.462, TCN-causal, deeper + noise aug. 0.486, TCN-spectral + noise aug. 0.589, TCN-spectral 0.615, TCN-spectral, tuned 0.629). Test results played no part in this choice; the other variants are shown as ablations.
 
 | Detector | Operating point | Event F1 [95% CI] | Strict event F1 | Recall | Precision | False alarms / min | PR-AUC [95% CI] | Debounce (median) |
 |---|---|---|---|---|---|---|---|---|
@@ -22,6 +22,8 @@ Online (deployable) setting, 8 test subjects x 3 seeds. Point estimate = pooled 
 | TCN-spectral + noise aug. | threshold+debounce | 52.8 [38.2, 63.9] | 37.7 [25.0, 49.9] | 69.8 | 42.6 | 0.77 | 0.598 [0.501, 0.702] | 0.25 s |
 | TCN-spectral | threshold | 58.5 [43.7, 68.1] | 40.8 [28.0, 53.3] | 70.7 | 50.1 | 0.63 | 0.641 [0.549, 0.735] | 0.00 s |
 | TCN-spectral | threshold+debounce | 53.8 [40.5, 63.9] | 36.6 [25.8, 47.4] | 66.9 | 45.0 | 0.69 | 0.641 [0.549, 0.735] | 0.00 s |
+| TCN-spectral, tuned | threshold | 61.2 [48.5, 68.4] | 42.0 [30.5, 51.5] | 72.3 | 53.1 | 0.61 | 0.599 [0.489, 0.705] | 0.00 s |
+| TCN-spectral, tuned | threshold+debounce | 55.4 [41.7, 64.9] | 39.3 [28.8, 49.3] | 67.4 | 47.4 | 0.72 | 0.599 [0.489, 0.705] | 0.25 s |
 
 ## Paired comparison with the Freeze Index (same operating-point rule)
 
@@ -43,5 +45,7 @@ Difference in event F1 (points). CI = paired bootstrap over test subjects; P(>0)
 | TCN-spectral + noise aug. | threshold+debounce | -2.2 [-10.4, +5.7] | 0.33 | 0.547 | 6/8 | -4.3 [-11.1, +4.6] | +0.170 [+0.106, +0.241] | 0.008 | 8/8 |
 | TCN-spectral | threshold | +6.3 [-3.0, +14.7] | 0.92 | 0.148 | 7/8 | +0.6 [-6.6, +9.2] | +0.227 [+0.141, +0.314] | 0.008 | 8/8 |
 | TCN-spectral | threshold+debounce | -1.1 [-8.1, +6.4] | 0.37 | 0.945 | 5/8 | -5.4 [-10.8, +2.4] | +0.214 [+0.137, +0.293] | 0.008 | 8/8 |
+| TCN-spectral, tuned | threshold | +9.1 [+2.8, +14.5] | 1.00 | 0.148 | 7/8 | +1.7 [-3.6, +7.1] | +0.185 [+0.108, +0.270] | 0.008 | 8/8 |
+| TCN-spectral, tuned | threshold+debounce | +0.4 [-6.9, +7.6] | 0.57 | 0.461 | 5/8 | -2.7 [-8.2, +4.8] | +0.171 [+0.107, +0.242] | 0.008 | 8/8 |
 
 Read with care: 8 patients from one lab study. These are descriptive statistics, not a confirmatory test, and nothing here is a clinical claim.

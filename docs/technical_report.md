@@ -34,7 +34,8 @@ the deployed conditions and is explicit about what 8 test patients can and canno
 |---|---|---|
 | Freeze Index (Moore et al., 2008) | ankle vertical axis | power 3-8 Hz / power 0.5-3 Hz over a causal 4 s window, plus a minimum-power gate; both thresholds chosen on validation patients |
 | TCN-causal | 9 raw axes | 6 dilated causal residual layers, hidden 32 (receptive field 4 s), 12 epochs |
-| TCN-spectral (selected) | 9 raw axes + 19 causal log band powers | 8 layers (16 s), 20 epochs |
+| TCN-spectral, tuned (selected) | 9 raw axes + 19 causal log band powers | 64 channels, 10 layers (64 s), 20 epochs, 171k parameters; chosen by the hyperparameter search |
+| TCN-spectral | same | 32 channels, 8 layers (16 s), 20 epochs, 35k parameters |
 | TCN-spectral + noise aug. | same | plus one noisy copy of each training recording (Gaussian noise, std U(0.1, 0.5) x feature std) |
 | TCN-causal, deeper + noise aug. | 9 raw axes | 8 layers, 20 epochs, noise augmentation |
 | TCN-acausal, LSTM, BiLSTM | 9 raw axes | comparison models; acausal ones re-run on the last 10 s every 250 ms online |
@@ -81,6 +82,7 @@ Online setting, threshold chosen on validation patients (`results/daphnet_summar
 | TCN-causal, deeper + noise aug. | threshold | 47.8 [32.4, 61.0] | 35.1 [23.2, 46.6] | 63.0 | 38.7 | 0.85 | 0.496 [0.372, 0.617] | 0.00 s |
 | TCN-spectral + noise aug. | threshold | 52.0 [35.9, 64.3] | 36.4 [22.7, 50.3] | 71.0 | 41.0 | 0.83 | 0.598 [0.501, 0.702] | 0.00 s |
 | TCN-spectral | threshold | 58.5 [43.7, 68.1] | 40.8 [28.0, 53.3] | 70.7 | 50.1 | 0.63 | 0.641 [0.549, 0.735] | 0.00 s |
+| TCN-spectral, tuned | threshold | 61.2 [48.5, 68.4] | 42.0 [30.5, 51.5] | 72.3 | 53.1 | 0.61 | 0.599 [0.489, 0.705] | 0.00 s |
 
 Paired with the Freeze Index:
 
@@ -93,17 +95,19 @@ Paired with the Freeze Index:
 | TCN-causal, deeper + noise aug. | threshold | -4.3 [-14.1, +8.0] | 0.23 | 0.383 | 4/8 | -5.2 [-14.2, +7.0] | +0.082 [+0.012, +0.158] | 0.109 | 5/8 |
 | TCN-spectral + noise aug. | threshold | -0.2 [-10.1, +9.3] | 0.53 | 0.742 | 4/8 | -3.8 [-11.3, +5.9] | +0.184 [+0.110, +0.262] | 0.008 | 8/8 |
 | TCN-spectral | threshold | +6.3 [-3.0, +14.7] | 0.92 | 0.148 | 7/8 | +0.6 [-6.6, +9.2] | +0.227 [+0.141, +0.314] | 0.008 | 8/8 |
+| TCN-spectral, tuned | threshold | +9.1 [+2.8, +14.5] | 1.00 | 0.148 | 7/8 | +1.7 [-3.6, +7.1] | +0.185 [+0.108, +0.270] | 0.008 | 8/8 |
 
 Reading the results:
 
-1. **Ranking.** TCN-spectral separates freeze from non-freeze frames better than the Freeze Index in
-   every one of the 8 patients (PR-AUC +0.227 [+0.141, +0.314], exact Wilcoxon p = 0.008). The baseline
-   TCN already did so in 6 of 8 patients (+0.114 [+0.029, +0.193]).
-2. **Alarms.** At one validation-chosen threshold, TCN-spectral has higher event F1 in 7 of 8 patients
-   (58.5 vs 52.1; paired +6.3 [-3.0, +14.7]; bootstrap P(>0) = 0.92; Wilcoxon p = 0.148), detecting more
-   episodes (70.7% vs 57.8%) with slightly fewer false alarms (0.63 vs 0.68 per minute). Likely, but not
-   established with 8 patients. Under strict one-to-one matching the two are tied (40.8 vs 40.3).
-3. **Timing.** The learned models flag onsets within tens to hundreds of milliseconds; the Freeze Index
+1. **Ranking.** The selected model (TCN-spectral, tuned) separates freeze from non-freeze frames better
+   than the Freeze Index in every one of the 8 patients (PR-AUC +0.185 [+0.108, +0.270], exact Wilcoxon
+   p = 0.008). All three spectral TCNs do so in 8 of 8 patients; the raw-input baseline TCN in 6 of 8.
+2. **Alarms.** At one validation-chosen threshold the selected model has higher event F1 (61.2 vs 52.1;
+   paired +9.1 [+2.8, +14.5]; better in 7 of 8 patients; bootstrap P(>0) = 1.00), detecting more episodes
+   (72.3% vs 57.8%) with fewer false alarms (0.61 vs 0.68 per minute). The bootstrap CI excludes zero, but
+   the exact Wilcoxon test gives p = 0.148 because patient S01 goes strongly the other way (22.8 vs 38.8):
+   likely, not proven with 8 patients. Under strict matching the gap shrinks to +1.7 [-3.6, +7.1].
+3. **Timing.** The selected model flags onsets a median 203 ms after they start; the Freeze Index
    needs about a second because its 4 s window must fill with freeze-band power.
 4. **Debounce.** Requiring an alarm to last 0.25 to 1.5 s (chosen on validation) lifts the Freeze Index to
    55.0 but does not help the learned models, whose probability is already smooth.
@@ -115,14 +119,30 @@ Reading the results:
 | TCN-causal (baseline) | 0.462 | 0.528 | 48.1 |
 | TCN-causal, deeper + noise aug. | 0.486 | 0.496 | 47.8 |
 | TCN-spectral + noise aug. | 0.589 | 0.598 | 52.0 |
-| **TCN-spectral** | **0.615** | **0.641** | **58.5** |
+| TCN-spectral | 0.615 | 0.641 | 58.5 |
+| **TCN-spectral, tuned** (search winner) | **0.629** | 0.599 | **61.2** |
 
 Spectral input features are what helped: +0.10 validation PR-AUC at equal depth and augmentation
 (0.486 to 0.589), +0.15 over the baseline overall. Noise augmentation lowered clean
-accuracy and did not buy robustness to noise (section 6). The chosen variant is also the best on the
-test patients; the two weakest variants swap places on test, within their CIs.
+accuracy and did not buy robustness to noise (section 6). The validation rule picks the tuned model,
+which has the best test event F1, precision and false-alarm rate; untuned TCN-spectral has the higher
+test PR-AUC (0.641 vs 0.599, overlapping CIs). Choosing by test numbers would be test-set selection,
+so the pre-stated validation rule is kept.
 
-SEARCH_SECTION
+### Hyperparameter search
+
+`rtsurg/hparam_search.py` trains 16 configurations on every fold (seed 0) and scores each on that fold's
+validation patients only; a test checks that the fold's test patient is never featurized. Grid: width 16,
+32, 64 x depth 6, 8, 10 layers (receptive field 4, 16, 64 s), plus learning rate 0.001 / 0.005, dropout
+0.1 / 0.5, training window 4 / 16 s and raw input (`results/hparam_search/search.md`).
+
+* Every spectral configuration lands between 0.617 and 0.647 mean validation PR-AUC; raw input gives 0.460.
+  The representation, not the size or optimiser settings, is what matters.
+* The best configuration (64 channels, 10 layers, 171k parameters, 0.647) was run on the full 3-seed
+  protocol as "TCN-spectral, tuned" and, with mean validation PR-AUC 0.629 over 3 seeds (vs 0.615 for
+  TCN-spectral), is the model selected for the headline results.
+* Validation scores are optimistic (epoch and threshold are also chosen on them), equally for every
+  configuration: they rank configurations, they are not performance estimates.
 
 ### Offline vs. online
 Causal models produce identical results offline and online. Acausal models re-run on the last 10 s
@@ -142,6 +162,11 @@ From `results/daphnet/robustness.md` (baseline models; every choice on clean val
   mode: at 1x feature std false alarms rise from 1.14 to 3.36 per minute for TCN-causal; the Freeze
   Index loses 22 F1 points, the TCN 13.
 
+For the selected model (`results/daphnet_tuned/robustness.md`): at noise 1x feature std, event F1 falls
+from 60.4 to 33.7 and false alarms rise from 0.64 to 3.25 per minute (Freeze Index: 52.1 to 30.0, 0.68 to
+3.47); it stays ahead of the Freeze Index at every noise level. Temperature scaling changes its ECE from
+8.8% to 7.4% (temperature 2.1 ± 1.0 across folds).
+
 For the development variants (`results/daphnet_spectral/robustness.md`,
 `results/daphnet_spectral_aug/robustness.md`): at noise 1x feature std, event F1 falls from 56.8 to 33.0
 (TCN-spectral) and from 51.7 to 30.2 (with noise augmentation); the raw-input TCN keeps 35.5. Spectral
@@ -155,8 +180,8 @@ Each causal model exports as one streaming step (frame + state in, logits + stat
 ONNX and dynamic int8 ONNX (`results/deployment.md`). For the baseline TCN (26.5k parameters), ONNX
 Runtime fp32 takes 0.042 ms per frame on one CPU thread, about 10x faster than eager PyTorch; outputs
 match the offline pass within 2e-6. Dynamic int8 halves the file size with a 0.2 point change in event
-F1 but is slower at this model size. TCN-spectral (35k parameters) adds the spectral featurizer (one 64-point FFT per axis
-per frame) and was not yet exported; its eager PyTorch step takes about 0.35 ms.
+F1 but is slower at this model size. The selected model (171k parameters) adds the spectral featurizer (one 64-point FFT per axis per frame)
+and was not yet exported; its eager PyTorch step takes about 1.0 ms (TCN-spectral, 35k parameters: 0.35 ms).
 
 ## 8. Session-report agent
 
@@ -184,9 +209,9 @@ Audit of the code and results before the changes above:
 * **Event metric.** The definition is reasonable and stops an always-on detector, but it can be generous
   (fragmented alarms, detection by an alarm that is itself a false alarm). The strict variant now
   reported leaves the ranking of detectors unchanged; strict F1 is 8 to 16 points lower for every
-  detector. Learned models lose more than the Freeze Index (TCN-spectral 58.5 to 40.8, Freeze Index 52.1
-  to 40.3) because they sometimes split a long freeze into several alarms; under strict matching
-  TCN-spectral and the Freeze Index are tied (+0.6, CI -6.6 to +9.2).
+  detector. Learned models lose more than the Freeze Index (selected model 61.2 to 42.0, Freeze Index
+  52.1 to 40.3) because they sometimes split a long freeze into several alarms; under strict matching the
+  difference is +1.7 (CI -3.6 to +7.1).
 * **Robustness to a NaN validation score.** `train_fog_model` crashed if every validation PR-AUC was NaN;
   it now keeps the last epoch.
 * **Reproducibility.** The baseline re-run reproduced all 216 result rows (event counts and thresholds)

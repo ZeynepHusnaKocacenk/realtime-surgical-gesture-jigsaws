@@ -25,7 +25,15 @@ RATE = 32.0
 FI = "Freeze Index"
 INK, INK2, GRID, SURF = "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
 COL = {FI: "#7d7c78", "TCN-causal": "#2a78d6", "TCN-spectral": "#eb6834", "TCN-spectral + noise aug.": "#1baf7a"}
-RUN = {"TCN-causal": "daphnet", "TCN-spectral": "daphnet_spectral", "TCN-spectral + noise aug.": "daphnet_spectral_aug"}
+RUN = {"TCN-causal": "daphnet", "TCN-spectral": "daphnet_spectral", "TCN-spectral + noise aug.": "daphnet_spectral_aug",
+       "TCN-spectral, tuned": "daphnet_tuned"}
+COL["TCN-spectral, tuned"] = COL["TCN-spectral"]   # the selected model always wears slot 2 (orange);
+# figures never show both TCN-spectral variants together (all-pairs CVD rule: 3 coloured series max)
+
+
+def selected() -> str:
+    """The learned model chosen on validation patients (rtsurg/fog_summary.py)."""
+    return json.load(open(RES / "daphnet_summary.json"))["selected_by_validation"]
 
 plt.rcParams.update({"figure.facecolor": SURF, "axes.facecolor": SURF, "savefig.facecolor": SURF,
                      "axes.edgecolor": GRID, "axes.labelcolor": INK2, "xtick.color": INK2, "ytick.color": INK2,
@@ -52,7 +60,7 @@ def _per_patient(rows, fn) -> Dict[str, float]:
 
 
 def per_patient_paired():
-    a, b = FI, "TCN-spectral"
+    a, b = FI, selected()
     metrics = [("Online event F1 (%)", lambda r: r["summary"]["event_f1"]), ("PR-AUC", lambda r: r["pr_auc"])]
     fig, axes = plt.subplots(1, 2, figsize=(9.5, 3.9))
     for ax, (label, fn) in zip(axes, metrics):
@@ -100,8 +108,8 @@ def model_selection():
     ax.text(fi, -0.55, " Freeze Index (test)", color=INK2, fontsize=8, va="center")
     ax.set_yticks(range(len(order))); ax.set_yticklabels([names[i] for i in order])
     ax.set_xlabel("PR-AUC"); ax.set_xlim(0.28, 0.98); ax.set_ylim(-0.9, len(order) - 0.5); ax.grid(axis="y", visible=False)
-    ax.set_title("Model selection on validation patients only; the selected variant is also best on test", loc="left")
-    ax.legend(loc="upper left", fontsize=8)
+    ax.set_title("Model selection uses validation patients only; test values shown for transparency", loc="left")
+    ax.legend(loc="lower right", fontsize=8)
     fig.tight_layout(); fig.savefig(OUT / "model_selection.png", dpi=170); plt.close(fig)
 
 
@@ -121,7 +129,7 @@ def _fault_curve(run: str, model: str, kind: str, metric: str):
 
 def robustness_noise():
     series = [(FI, "daphnet", FI), ("TCN-causal", "daphnet", "TCN-causal"),
-              ("TCN-spectral", "daphnet_spectral", "TCN-causal"),
+              (selected(), RUN[selected()], "TCN-causal"),
               ("TCN-spectral + noise aug.", "daphnet_spectral_aug", "TCN-causal")]
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.9))
     for ax, (metric, label) in zip(axes, [("event_f1", "Event F1 (%)"), ("false_alarms_per_min", "False alarms per minute")]):
@@ -148,7 +156,7 @@ def robustness_noise():
 
 
 def onset_delay():
-    names = [FI, "TCN-causal", "TCN-spectral"]
+    names = [FI, "TCN-causal", selected()]
     data = [np.asarray([d for r in _detector_rows(n) for d in r["counts"]["delays_ms"]]) / 1000 for n in names]
     fig, ax = plt.subplots(figsize=(7.5, 3.0))
     rng = np.random.default_rng(0)
@@ -168,7 +176,7 @@ def onset_delay():
 
 def operating_points():
     s = json.load(open(RES / "daphnet_summary.json"))["detectors"]
-    names = [FI, "TCN-causal", "TCN-spectral", "TCN-spectral + noise aug."]
+    names = [FI, "TCN-causal", selected(), "TCN-spectral + noise aug."]
     fig, ax = plt.subplots(figsize=(6.2, 4.0))
     for n in names:
         d = s[f"{n} | threshold"]
@@ -178,7 +186,7 @@ def operating_points():
                     yerr=[[d["event_recall"]["point"] - d["event_recall"]["lo"]],
                           [d["event_recall"]["hi"] - d["event_recall"]["point"]]],
                     fmt="o", ms=9, color=COL[n], mec=SURF, mew=1.5, ecolor=COL[n], elinewidth=1.2, capsize=3)
-        off = (-82, 8) if n == "TCN-spectral" else (8, 6)
+        off = (8, -14) if n == "TCN-spectral + noise aug." else (8, 6)
         ax.annotate(n, (d["false_alarms_per_min"]["point"], d["event_recall"]["point"]), xytext=off,
                     textcoords="offset points", fontsize=8, color=INK)
     ax.set_xlabel("False alarms per minute (lower is better)"); ax.set_ylabel("Episodes detected (%)")
