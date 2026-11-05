@@ -8,11 +8,23 @@ All thresholds were selected on validation subjects only. Event metrics are pool
 
 | Model | Causal | Event precision | Event recall | Event F1 | Sensitivity | Specificity | PR-AUC | Median onset delay (ms) | False alarms / min | Latency median / p95 (ms) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Freeze Index | yes | 47.5 ± 2.6 | 57.8 ± 2.8 | 52.1 ± 2.6 | 27.5 ± 20.2 | 97.4 ± 2.8 | 0.265 ± 0.122 | 1094 | 0.68 ± 0.04 | n/a (FFT, no network) |
+| Freeze Index | yes | 47.5 ± 2.6 | 57.8 ± 2.8 | 52.1 ± 2.6 | 27.5 ± 20.2 | 97.4 ± 2.8 | 0.414 ± 0.180 | 1094 | 0.68 ± 0.04 | n/a (FFT, no network) |
 | TCN-causal | yes | 38.3 ± 3.4 | 65.5 ± 8.4 | 48.1 ± 3.9 | 36.3 ± 33.3 | 92.8 ± 13.4 | 0.528 ± 0.167 | 250 | 1.11 ± 0.07 | 0.49 / 0.73 |
 | TCN-acausal | no | 39.9 ± 8.3 | 61.0 ± 6.2 | 47.5 ± 5.9 | 43.3 ± 33.0 | 89.8 ± 16.5 | 0.520 ± 0.177 | 359 | 1.00 ± 0.18 | 3.08 / 3.42 |
 | LSTM | yes | 17.6 ± 2.3 | 57.0 ± 2.1 | 26.7 ± 2.6 | 48.2 ± 37.1 | 81.8 ± 17.9 | 0.376 ± 0.186 | 0 | 1.63 ± 0.16 | 0.16 / 0.26 |
 | BiLSTM | no | 25.2 ± 2.4 | 61.6 ± 6.8 | 35.7 ± 3.4 | 46.6 ± 33.8 | 81.6 ± 18.3 | 0.363 ± 0.195 | 156 | 1.60 ± 0.19 | 17.40 / 21.23 |
+
+## Online with a debounced alarm (threshold and minimum alarm duration both chosen on validation subjects)
+
+An alarm is raised once p(freeze) has stayed above the threshold for the chosen duration (0 to 1.5 s); the same rule is applied to the Freeze Index. PR-AUC of the Freeze Index is computed on the power-gated FI score that its detector uses.
+
+| Model | Event precision | Event recall | Event F1 | False alarms / min | Median onset delay (ms) | Median debounce (s) |
+|---|---|---|---|---|---|---|
+| Freeze Index | 51.0 ± 3.2 | 59.6 ± 3.7 | 55.0 ± 3.2 | 0.59 ± 0.01 | 1109 | 0.38 |
+| TCN-causal | 35.4 ± 7.7 | 64.8 ± 6.5 | 45.1 ± 6.7 | 1.11 ± 0.09 | 219 | 0.00 |
+| TCN-acausal | 39.9 ± 7.0 | 58.6 ± 4.3 | 47.0 ± 5.0 | 0.97 ± 0.15 | 688 | 0.25 |
+| LSTM | 16.4 ± 3.8 | 58.4 ± 5.4 | 25.4 ± 4.8 | 1.75 ± 0.47 | 0 | 0.25 |
+| BiLSTM | 22.5 ± 5.7 | 56.7 ± 9.7 | 31.3 ± 5.1 | 1.71 ± 0.73 | 0 | 1.00 |
 
 ## Offline vs. online (event F1, pooled; mean ± std across seeds)
 
@@ -67,3 +79,5 @@ All thresholds were selected on validation subjects only. Event metrics are pool
 | BiLSTM | 3.02 / 3.27 | 7.64 / 8.66 | 17.40 / 21.23 | 31.68 / 48.82 | 80.09 / 84.91 |
 
 Latency measured on `x86_64`; online acausal models re-run on the last 10 s every 8 frames (250 ms), as a deployed system would have to.
+
+Latency note: latency block from the original run on an idle machine (same model configurations); the re-run that produced these accuracy rows shared the CPU with other jobs.

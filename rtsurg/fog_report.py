@@ -47,14 +47,16 @@ def write_daphnet_report(res: Dict, out: Path) -> None:
     names = [FI_NAME] + models
     causal = {"TCN-causal": True, "LSTM": True, "TCN-acausal": False, "BiLSTM": False, FI_NAME: True}
     ref_frames = str(int(60 * rate))
-    agg = {(m, mode): aggregate(rows, rate, m, mode) for m in names for mode in ("offline", "online")
+    agg = {(m, mode): aggregate(rows, rate, m, mode) for m in names for mode in ("offline", "online", "online_pp")
            if any(x["model"] == m and x["mode"] == mode for x in rows)}
     folds = sorted({x["fold"] for x in rows})
     L = []
     L += [f"# Daphnet Freezing of Gait: leave-one-subject-out results", "",
           f"Seeds {meta['seeds']} · {len(folds)} test subjects with freezes ({', '.join(folds)}) · "
           f"{rate:.0f} Hz · frame budget {meta['frame_ms']:.1f} ms · {meta['epochs']} epochs · "
-          f"hidden {meta['hidden']} · TCN layers {meta['tcn_layers']} · {meta['n_val']} validation subjects per fold", "",
+          f"hidden {meta['hidden']} · TCN layers {meta['tcn_layers']} · {meta['n_val']} validation subjects per fold · "
+          f"input features: {meta.get('features', 'raw')} · training noise augmentation: "
+          f"{'up to ' + str(meta['augment_noise']) + 'x feature std' if meta.get('augment_noise') else 'none'}", "",
           "All thresholds were selected on validation subjects only. Event metrics are pooled over all "
           "test subjects within a seed (mean ± std across seeds). Sensitivity, specificity and PR-AUC are "
           "per fold (mean ± std across seeds and folds).", "",
@@ -71,6 +73,21 @@ def write_daphnet_report(res: Dict, out: Path) -> None:
                  f"{_ms([f['sensitivity'] for f in a['fold_summ']])} | {_ms([f['specificity'] for f in a['fold_summ']])} | "
                  f"{_ms(a['pr_auc'], 3)} | {a['pooled_all']['median_delay_ms']:.0f} | "
                  f"{_ms([p['false_alarms_per_min'] for p in ps], 2)} | {lat_s} |")
+    if any((m, "online_pp") in agg for m in names):
+        L += ["", "## Online with a debounced alarm (threshold and minimum alarm duration both chosen on validation subjects)", "",
+              "An alarm is raised once p(freeze) has stayed above the threshold for the chosen duration (0 to 1.5 s); "
+              "the same rule is applied to the Freeze Index. PR-AUC of the Freeze Index is computed on the "
+              "power-gated FI score that its detector uses.", "",
+              "| Model | Event precision | Event recall | Event F1 | False alarms / min | Median onset delay (ms) | Median debounce (s) |",
+              "|---|---|---|---|---|---|---|"]
+        for m in names:
+            if (m, "online_pp") not in agg:
+                continue
+            a = agg[(m, "online_pp")]; ps = a["pooled_by_seed"]
+            md = np.median([x.get("min_dur", 0) for x in rows if x["model"] == m and x["mode"] == "online_pp"]) / rate
+            L.append(f"| {m} | {_ms([p['event_precision'] for p in ps])} | {_ms([p['event_recall'] for p in ps])} | "
+                     f"{_ms([p['event_f1'] for p in ps])} | {_ms([p['false_alarms_per_min'] for p in ps], 2)} | "
+                     f"{a['pooled_all']['median_delay_ms']:.0f} | {md:.2f} |")
     L += ["", "## Offline vs. online (event F1, pooled; mean ± std across seeds)", "",
           "| Model | Offline event F1 | Online event F1 | Change | Offline PR-AUC | Online PR-AUC |", "|---|---|---|---|---|---|"]
     for m in models:

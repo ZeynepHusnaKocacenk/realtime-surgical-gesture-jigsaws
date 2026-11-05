@@ -1,0 +1,1454 @@
+{
+ "results": [
+  {
+   "name": "spectral_h64_L10_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 64,
+    "layers": 10,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 171461,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.5519837815345604,
+     "val_event_f1": 52.78986941036802
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5769520783589722,
+     "val_event_f1": 67.72908366533864
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.597107651981806,
+     "val_event_f1": 57.70992366412213
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7148607448753563,
+     "val_event_f1": 66.87898089171975
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.6628205740839158,
+     "val_event_f1": 71.13918536266608
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7658160404546485,
+     "val_event_f1": 77.27123647097409
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7730966811751826,
+     "val_event_f1": 76.54685494223364
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5351550443560112,
+     "val_event_f1": 57.6271186440678
+    }
+   ],
+   "minutes": 56.64809453487396,
+   "val_pr_auc": 0.6472240746025566,
+   "val_event_f1": 65.96153163143626
+  },
+  {
+   "name": "spectral_h32_L8_lr0.002_do0.3_w128",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 128
+   },
+   "params": 35429,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.5393495102521493,
+     "val_event_f1": 61.36255359695094
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5881411103651446,
+     "val_event_f1": 74.35241445474897
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.6438656743153539,
+     "val_event_f1": 64.03123474865788
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7491876107100254,
+     "val_event_f1": 65.75342465753424
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5826418929933018,
+     "val_event_f1": 67.16417910447761
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7338124694976519,
+     "val_event_f1": 65.625
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7695076212943155,
+     "val_event_f1": 76.30933333333333
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5153587876680293,
+     "val_event_f1": 72.18045112781954
+    }
+   ],
+   "minutes": 16.202813442548116,
+   "val_pr_auc": 0.6402330846369966,
+   "val_event_f1": 68.34732387794031
+  },
+  {
+   "name": "spectral_h32_L8_lr0.002_do0.3_w512",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 512
+   },
+   "params": 35429,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6552013743632848,
+     "val_event_f1": 63.100634632819585
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5791136119361984,
+     "val_event_f1": 71.68917977997494
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.5682698864474369,
+     "val_event_f1": 53.62739408009287
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7166575313421945,
+     "val_event_f1": 62.135922330097074
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5876322995815927,
+     "val_event_f1": 68.90666666666667
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7475700669802923,
+     "val_event_f1": 68.29268292682927
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7702896364682652,
+     "val_event_f1": 77.28494623655914
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.49036882122268366,
+     "val_event_f1": 61.7169373549884
+    }
+   ],
+   "minutes": 12.714678939183553,
+   "val_pr_auc": 0.6393879035427437,
+   "val_event_f1": 65.8442955010035
+  },
+  {
+   "name": "spectral_h32_L8_lr0.001_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.001,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 35429,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6031773963936541,
+     "val_event_f1": 56.310679611650485
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5810253217803563,
+     "val_event_f1": 72.74308575404419
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.6147994802469655,
+     "val_event_f1": 58.71866295264624
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6991737772245984,
+     "val_event_f1": 69.20507682030728
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5746967760932207,
+     "val_event_f1": 66.89486552567239
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7439441621553591,
+     "val_event_f1": 71.09004739336493
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7743896543785243,
+     "val_event_f1": 76.03410167350805
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.523399885715977,
+     "val_event_f1": 67.84660766961652
+    }
+   ],
+   "minutes": 13.653732796510061,
+   "val_pr_auc": 0.6393258067485819,
+   "val_event_f1": 67.35539092510126
+  },
+  {
+   "name": "spectral_h32_L8_lr0.002_do0.1_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.1,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 35429,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6019467762901404,
+     "val_event_f1": 55.408970976253315
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.57941898368076,
+     "val_event_f1": 73.30417791011445
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.6002663828431789,
+     "val_event_f1": 53.56593124679322
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6901111624282313,
+     "val_event_f1": 68.00689259046526
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.6079939907443827,
+     "val_event_f1": 67.78753161731885
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7346668853988461,
+     "val_event_f1": 71.70063481456732
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7779611529891854,
+     "val_event_f1": 75.33379373848987
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5147711089885675,
+     "val_event_f1": 62.67806267806267
+    }
+   ],
+   "minutes": 12.92940930922826,
+   "val_pr_auc": 0.6383920554204114,
+   "val_event_f1": 65.97324944650812
+  },
+  {
+   "name": "spectral_h32_L10_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 10,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 43749,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.5945655876437029,
+     "val_event_f1": 59.31737936445665
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5811377634651699,
+     "val_event_f1": 73.68000912304711
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.6016324485616553,
+     "val_event_f1": 56.56192236598891
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7023091431478361,
+     "val_event_f1": 66.3280662151994
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5914640631913974,
+     "val_event_f1": 68.76394466755912
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7466312496828161,
+     "val_event_f1": 74.05043089690392
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7665252575675111,
+     "val_event_f1": 73.9204312415773
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.517621527494332,
+     "val_event_f1": 60.16096579476861
+    }
+   ],
+   "minutes": 27.980554497241975,
+   "val_pr_auc": 0.6377358800943026,
+   "val_event_f1": 66.59789370868764
+  },
+  {
+   "name": "spectral_h32_L6_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 6,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 27109,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6012864994355718,
+     "val_event_f1": 60.068649885583525
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5695082907239881,
+     "val_event_f1": 72.961768770152
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.589084270741843,
+     "val_event_f1": 56.510039329331406
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7192043960082484,
+     "val_event_f1": 73.15985130111525
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.6112622923949474,
+     "val_event_f1": 69.71480307831598
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7517497251263563,
+     "val_event_f1": 74.05043089690392
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7711603508566223,
+     "val_event_f1": 77.37154150197628
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.486972410086407,
+     "val_event_f1": 60.59322033898306
+    }
+   ],
+   "minutes": 10.495873765150707,
+   "val_pr_auc": 0.6375285294217481,
+   "val_event_f1": 68.05378813779518
+  },
+  {
+   "name": "spectral_h64_L6_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 64,
+    "layers": 6,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 105413,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.5487874555529434,
+     "val_event_f1": 55.37873965626989
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5661307799453882,
+     "val_event_f1": 70.88858946174031
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.5811496505870066,
+     "val_event_f1": 61.946902654867266
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7510537013758244,
+     "val_event_f1": 70.20089285714286
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.6386923139027912,
+     "val_event_f1": 67.44745917105863
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7431200456845284,
+     "val_event_f1": 71.99642697632873
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.762495375040058,
+     "val_event_f1": 77.14248331806883
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.504257438080883,
+     "val_event_f1": 57.849196538936965
+    }
+   ],
+   "minutes": 36.78177995284398,
+   "val_pr_auc": 0.6369608450211779,
+   "val_event_f1": 66.60633632930168
+  },
+  {
+   "name": "spectral_h32_L8_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 35429,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6059681880692407,
+     "val_event_f1": 54.42708333333333
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.578276345970017,
+     "val_event_f1": 74.90676611614279
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.5983947993970354,
+     "val_event_f1": 56.60639777468707
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6880200906794794,
+     "val_event_f1": 68.71508379888269
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5835785567297791,
+     "val_event_f1": 68.1577480490524
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7369251066214508,
+     "val_event_f1": 72.73927392739273
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7763600243669002,
+     "val_event_f1": 75.62125356456963
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5111040255415088,
+     "val_event_f1": 61.61137440758293
+    }
+   ],
+   "minutes": 14.049488790829976,
+   "val_pr_auc": 0.6348283921719264,
+   "val_event_f1": 66.59812262145545
+  },
+  {
+   "name": "spectral_h32_L8_lr0.002_do0.5_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.5,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 35429,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.5949662166751147,
+     "val_event_f1": 58.78416062465143
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.577443570528195,
+     "val_event_f1": 74.29453881791379
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.5952872374606191,
+     "val_event_f1": 53.84615384615385
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7014490865300165,
+     "val_event_f1": 71.23287671232877
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5707971374948476,
+     "val_event_f1": 66.79076693968727
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.739436155417276,
+     "val_event_f1": 74.55621301775149
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7784613904890614,
+     "val_event_f1": 76.94981533782314
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5033504752126479,
+     "val_event_f1": 60.64981949458485
+    }
+   ],
+   "minutes": 14.83805696964264,
+   "val_pr_auc": 0.6326489087259722,
+   "val_event_f1": 67.13804309886183
+  },
+  {
+   "name": "spectral_h64_L8_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 64,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 138437,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.5303286628572389,
+     "val_event_f1": 57.48502994011976
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5663133491013079,
+     "val_event_f1": 67.82019761562368
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.5787578002274091,
+     "val_event_f1": 53.0940594059406
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6880766472327126,
+     "val_event_f1": 68.32083092902481
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.6761989700221617,
+     "val_event_f1": 71.56673114119923
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7313906088661184,
+     "val_event_f1": 73.3278955954323
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7630709858734006,
+     "val_event_f1": 74.84608060933037
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5150178353844228,
+     "val_event_f1": 57.99648506151143
+    }
+   ],
+   "minutes": 44.61996337970098,
+   "val_pr_auc": 0.6311443574455965,
+   "val_event_f1": 65.55716378727277
+  },
+  {
+   "name": "spectral_h16_L10_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 16,
+    "layers": 10,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 11381,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6610970502692556,
+     "val_event_f1": 59.553349875930515
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5818763829751183,
+     "val_event_f1": 70.48975271817571
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.4748387604381016,
+     "val_event_f1": 41.55844155844156
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6613397340975233,
+     "val_event_f1": 60.19417475728156
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.6124387893557155,
+     "val_event_f1": 62.4390243902439
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7190965769585781,
+     "val_event_f1": 67.87878787878789
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7499061229303392,
+     "val_event_f1": 70.5408128988915
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5768707064842481,
+     "val_event_f1": 60.37735849056604
+    }
+   ],
+   "minutes": 8.789865001042683,
+   "val_pr_auc": 0.6296830154386099,
+   "val_event_f1": 61.628962821039835
+  },
+  {
+   "name": "spectral_h32_L8_lr0.005_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.005,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 35429,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.5683737093857877,
+     "val_event_f1": 58.49582172701949
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5535641134073616,
+     "val_event_f1": 69.72999288469461
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.6155773043648991,
+     "val_event_f1": 58.62174578866769
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.7091448313040213,
+     "val_event_f1": 69.85105290190037
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.6107620372076817,
+     "val_event_f1": 68.63984531865843
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7026047559253717,
+     "val_event_f1": 66.72802577082375
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7555215413090982,
+     "val_event_f1": 76.14251678579164
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.515455409451526,
+     "val_event_f1": 61.22448979591836
+    }
+   ],
+   "minutes": 14.070260973771413,
+   "val_pr_auc": 0.6288754627944684,
+   "val_event_f1": 66.1791863716843
+  },
+  {
+   "name": "spectral_h16_L8_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 16,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 9269,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6226415767373771,
+     "val_event_f1": 53.674121405750796
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5811884128934774,
+     "val_event_f1": 70.95483133218981
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.5057551026728175,
+     "val_event_f1": 48.16132858837485
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6507607180920579,
+     "val_event_f1": 62.65754411235146
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5824294441303962,
+     "val_event_f1": 67.2872340425532
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.7041782589486696,
+     "val_event_f1": 68.15415821501014
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7484158613901978,
+     "val_event_f1": 76.21839501648957
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.5575394073875534,
+     "val_event_f1": 58.620689655172406
+    }
+   ],
+   "minutes": 6.864901518821716,
+   "val_pr_auc": 0.6191135977815683,
+   "val_event_f1": 63.21603779598652
+  },
+  {
+   "name": "spectral_h16_L6_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "spectral",
+    "hidden": 16,
+    "layers": 6,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 7157,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.6094758808090677,
+     "val_event_f1": 53.93258426966292
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.5769545595231668,
+     "val_event_f1": 70.87576374745417
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.4911722895357456,
+     "val_event_f1": 55.41852532143795
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6795131111002308,
+     "val_event_f1": 63.033041513696695
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.571204466561336,
+     "val_event_f1": 65.44535691724573
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.722086101513634,
+     "val_event_f1": 67.98866855524078
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.7340825676432999,
+     "val_event_f1": 76.79450828234592
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.54759363509094,
+     "val_event_f1": 55.88235294117647
+    }
+   ],
+   "minutes": 5.313575383027395,
+   "val_pr_auc": 0.6165103264721776,
+   "val_event_f1": 63.671350193532575
+  },
+  {
+   "name": "raw_h32_L8_lr0.002_do0.3_w256",
+   "cfg": {
+    "features": "raw",
+    "hidden": 32,
+    "layers": 8,
+    "lr": 0.002,
+    "dropout": 0.3,
+    "epochs": 20,
+    "window": 256
+   },
+   "params": 34821,
+   "folds": [
+    {
+     "fold": "S01",
+     "val_users": [
+      "S07",
+      "S08"
+     ],
+     "val_pr_auc": 0.3678776927578724,
+     "val_event_f1": 51.001465559355154
+    },
+    {
+     "fold": "S02",
+     "val_users": [
+      "S03",
+      "S05"
+     ],
+     "val_pr_auc": 0.502493100725131,
+     "val_event_f1": 65.17136070580251
+    },
+    {
+     "fold": "S03",
+     "val_users": [
+      "S01",
+      "S09"
+     ],
+     "val_pr_auc": 0.3803680747618794,
+     "val_event_f1": 54.981818181818184
+    },
+    {
+     "fold": "S05",
+     "val_users": [
+      "S07",
+      "S09"
+     ],
+     "val_pr_auc": 0.6174424565276806,
+     "val_event_f1": 67.93442622950819
+    },
+    {
+     "fold": "S06",
+     "val_users": [
+      "S05",
+      "S07"
+     ],
+     "val_pr_auc": 0.5252607034722653,
+     "val_event_f1": 66.78283598344586
+    },
+    {
+     "fold": "S07",
+     "val_users": [
+      "S06",
+      "S09"
+     ],
+     "val_pr_auc": 0.255524510698466,
+     "val_event_f1": 41.22063453620732
+    },
+    {
+     "fold": "S08",
+     "val_users": [
+      "S05",
+      "S09"
+     ],
+     "val_pr_auc": 0.6729983207848362,
+     "val_event_f1": 73.53698932646302
+    },
+    {
+     "fold": "S09",
+     "val_users": [
+      "S06",
+      "S08"
+     ],
+     "val_pr_auc": 0.3576661696665956,
+     "val_event_f1": 40.67796610169491
+    }
+   ],
+   "minutes": 14.007816672325134,
+   "val_pr_auc": 0.4599538786743408,
+   "val_event_f1": 57.66343707803689
+  }
+ ],
+ "selected": "spectral_h64_L10_lr0.002_do0.3_w256",
+ "selected_cfg": {
+  "features": "spectral",
+  "hidden": 64,
+  "layers": 10,
+  "lr": 0.002,
+  "dropout": 0.3,
+  "epochs": 20,
+  "window": 256
+ }
+}

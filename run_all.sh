@@ -17,6 +17,17 @@ if [ -d "$DAPHNET_DIR" ] || [ -f results/daphnet/results.json ]; then
   if [ ! -f results/deployment.json ] && [ -d "$DAPHNET_DIR" ] && [ -d results/daphnet/models ]; then
     python export.py --data-dir "$DAPHNET_DIR"
   fi
+  # causal TCN variants (same seeds, folds and validation patients); fog_summary selects one by validation PR-AUC
+  for v in spectral spectral_aug aug; do
+    python main.py --config "configs/daphnet_$v.yaml" --data-dir "$DAPHNET_DIR" --skip-if-reproduced
+  done
+  for v in spectral spectral_aug; do
+    python main.py --config "configs/daphnet_$v.yaml" --data-dir "$DAPHNET_DIR" --robustness --skip-if-reproduced
+  done
+  python -m rtsurg.fog_summary          # headline table with bootstrap CIs and paired tests
+  if [ -d "$DAPHNET_DIR" ]; then
+    python demo_daphnet.py --data-dir "$DAPHNET_DIR" --offline-writer
+  fi
 else
   echo "[daphnet] $DAPHNET_DIR not found and no saved results: download Daphnet from the UCI repository first"
 fi

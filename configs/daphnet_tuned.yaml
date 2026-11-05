@@ -1,0 +1,20 @@
+# Daphnet, causal TCN chosen by the validation-only hyperparameter search (rtsurg/hparam_search.py):
+# spectral features, hidden 64, 10 layers (64 s receptive field), lr 0.002, dropout 0.3, 8 s windows.
+dataset: daphnet
+data_dir: data/daphnet
+out: results/daphnet_tuned
+models: [TCN-causal]
+seeds: [0, 1, 2]
+n_val: 2
+window: 256
+daphnet_epochs: 20
+daphnet_lr: 0.002
+daphnet_hidden: 64
+daphnet_tcn_layers: 10
+daphnet_downsample: 2
+online_history_s: 10.0
+recompute_stride: 8
+latency_device: cpu
+workers: 3
+features: spectral
+augment_noise: 0.0

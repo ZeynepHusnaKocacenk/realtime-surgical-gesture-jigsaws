@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader
 from rtsurg import plots
 from rtsurg.benchmark import evaluate_fold, profile_latency
 from rtsurg.data import (FRAME_RATE_HZ, IDX_TO_SKILL, Normalizer, TrialDataset, collate_padded,
-                         generate_synthetic_jigsaws, load_jigsaws_task, louo_splits)
+                         generate_synthetic_jigsaws, load_jigsaws_task, loso_supertrial_splits, louo_splits)
 from rtsurg.models import MODEL_NAMES, build_model
 from rtsurg.train import TrainConfig, train_model
 
@@ -54,6 +54,8 @@ def parse_args():
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--recompute-stride", type=int, default=5,
                    help="online acausal models are re-run every k frames")
+    p.add_argument("--protocol", choices=["louo", "loso"], default="louo",
+                   help="JIGSAWS: louo = leave one surgeon out; loso = leave one supertrial (repetition) out")
     p.add_argument("--max-folds", type=int, default=None, help="limit LOUO folds (quick runs)")
     p.add_argument("--latency-device", type=str, default="cpu",
                    help="device for latency profiling (cpu mimics an embedded OR workstation)")
@@ -71,6 +73,10 @@ def parse_args():
     d.add_argument("--daphnet-epochs", type=int, default=12)
     d.add_argument("--daphnet-lr", type=float, default=2e-3)
     d.add_argument("--daphnet-downsample", type=int, default=2, help="64 Hz / k")
+    d.add_argument("--features", choices=["raw", "spectral"], default="raw",
+                   help="model input: raw accelerations, or raw + causal band powers (rtsurg/features.py)")
+    d.add_argument("--augment-noise", type=float, default=0.0,
+                   help="add one noisy copy of every training trial, noise std U(0.1, x) x feature std (0 = off)")
     p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2],
                    help="random seeds; results are mean and std across seeds and folds")
     p.add_argument("--verbose", action="store_true")
@@ -151,7 +157,8 @@ def main():
     print(f"[data] skill per surgeon: {skills}")
 
     cfg = TrainConfig(epochs=args.epochs, lr=args.lr, seed=seeds[0])
-    folds = list(louo_splits(data))[: args.max_folds]
+    splitter = louo_splits if args.protocol == "louo" else loso_supertrial_splits
+    folds = list(splitter(data))[: args.max_folds]
     per_model = {m: {"folds": [], "history": []} for m in args.models}
 
     for seed in seeds:
@@ -162,7 +169,7 @@ def main():
             test_ds = TrialDataset(test_trials, norm, args.downsample)
             train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True, collate_fn=collate_padded)
             test_dl = DataLoader(test_ds, batch_size=cfg.batch_size, shuffle=False, collate_fn=collate_padded)
-            print(f"\n[seed {seed}] [fold] held-out surgeon {user} ({skills[user]}): "
+            print(f"\n[seed {seed}] [fold] held out {user} ({skills.get(user, args.protocol.upper())}): "
                   f"{len(train_trials)} train / {len(test_trials)} test trials")
             for m in args.models:
                 t0 = time.time()
@@ -205,7 +212,8 @@ def main():
     meta = {"task": data.trials[0].task, "synthetic": args.synthetic, "rate_hz": rate,
             "folds": [u for u, _, _ in folds], "seeds": seeds, "epochs": args.epochs, "torch": torch.__version__,
             "platform": platform.platform(), "processor": platform.processor(),
-            "recompute_stride": args.recompute_stride, "manipulators": args.manipulators}
+            "recompute_stride": args.recompute_stride, "manipulators": args.manipulators,
+            "protocol": args.protocol}
     with open(out / "results.json", "w") as f:
         json.dump({"meta": meta, "summary": summary,
                    "per_fold": {m: [{k: v for k, v in fr.items() if k not in ("example", "delay_ms")}
@@ -227,7 +235,7 @@ def write_markdown(summary, meta, ref_history, frame_ms, path: Path):
     def ms(d):
         return f"{d['mean']:.1f} ± {d['std']:.1f}"
     lines = [f"# Results: {meta['task']} ({'SYNTHETIC DATA, pipeline test only' if meta['synthetic'] else 'JIGSAWS'})",
-             "", f"LOUO folds: {', '.join(meta['folds'])} · {meta['rate_hz']:.0f} Hz · "
+             "", f"{meta.get('protocol', 'louo').upper()} folds: {', '.join(meta['folds'])} · {meta['rate_hz']:.0f} Hz · "
              f"frame budget {frame_ms:.0f} ms · latency on `{meta['processor'] or meta['platform']}`", "",
              "## Gesture recognition (mean ± std over folds)", "",
              "| Model | Causal | Offline acc | Online acc | Online edit | Online F1@10 | Online F1@25 | Online F1@50 |",

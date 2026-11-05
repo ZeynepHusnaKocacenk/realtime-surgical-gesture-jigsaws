@@ -1,5 +1,13 @@
 results/*
 !results/daphnet/
+!results/daphnet_spectral/
+!results/daphnet_spectral_aug/
+!results/daphnet_aug/
+!results/daphnet_tuned/
+!results/hparam_search/
+!results/daphnet_summary.md
+!results/daphnet_summary.json
+!results/daphnet_summary.png
 !results/deployment.md
 !results/deployment.json
 !results/deployment_latency.png
@@ -7,6 +15,7 @@ results/*
 results/jigsaws_*_quick/
 results/jigsaws_*/synthetic_data/
 results/daphnet/models/
+results/daphnet*/models/
 results/daphnet/results_partial.json
 __pycache__/
 *.pyc

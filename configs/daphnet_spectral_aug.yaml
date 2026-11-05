@@ -1,0 +1,21 @@
+# Daphnet, causal TCN variant: deeper (8 layers, 16 s receptive field) + causal spectral features +
+# Gaussian-noise augmentation, 20 epochs. One of the variants compared by VALIDATION PR-AUC in
+# rtsurg/fog_summary.py; the test patient is never used for any choice.
+dataset: daphnet
+data_dir: data/daphnet
+out: results/daphnet_spectral_aug
+models: [TCN-causal]
+seeds: [0, 1, 2]
+n_val: 2
+window: 256
+daphnet_epochs: 20
+daphnet_lr: 0.002
+daphnet_hidden: 32
+daphnet_tcn_layers: 8
+daphnet_downsample: 2
+online_history_s: 10.0
+recompute_stride: 8
+latency_device: cpu
+workers: 3
+features: spectral
+augment_noise: 0.5

@@ -1,0 +1,51 @@
+{
+ "facts": {
+  "subject": "S05",
+  "detector": "TCN-spectral",
+  "decision_threshold": 0.6,
+  "debounce_s": 0.5,
+  "duration_min": 34.8,
+  "frame_rate_hz": 32.0,
+  "n_alarms": 46,
+  "alarms_per_min": 1.32,
+  "total_alarm_time_s": 101.2,
+  "alarm_time_pct": 4.8,
+  "longest_alarm_s": 11.3,
+  "median_alarm_s": 1.5,
+  "first_alarm_onsets_mmss": [
+   "01:37",
+   "01:38",
+   "03:33",
+   "03:49",
+   "03:54",
+   "05:38",
+   "05:42",
+   "06:09"
+  ],
+  "low_confidence_pct": 9.5,
+  "alarms_with_low_confidence": 5,
+  "median_latency_ms_per_frame": 0.44,
+  "stuck_sensor_pct": 0.9,
+  "annotated_episodes": 66,
+  "episodes_detected": 25,
+  "episodes_missed": 41,
+  "false_alarms": 11,
+  "event_f1_pct": 50.6,
+  "median_onset_delay_ms": 2688,
+  "quality_flags": []
+ },
+ "trace": [
+  "analyze",
+  "draft",
+  "verify:pass",
+  "finalize"
+ ],
+ "source": "template (offline)",
+ "latency_ms": {
+  "median": 0.4393595004330564,
+  "p99": 1.1379842799851763,
+  "max": 7.885428000008687,
+  "budget": 31.25
+ },
+ "stream_vs_offline_max_abs_diff": 3.5762786865234375e-07
+}

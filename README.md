@@ -1,358 +1,321 @@
-JIGSAWS results pending dataset access; real results currently on Daphnet Freezing of Gait.
-
 [![tests](https://github.com/ZeynepHusnaKocacenk/realtime-surgical-gesture-jigsaws/actions/workflows/tests.yml/badge.svg)](https://github.com/ZeynepHusnaKocacenk/realtime-surgical-gesture-jigsaws/actions/workflows/tests.yml)
+[![project page](https://img.shields.io/badge/project%20page-GitHub%20Pages-blue)](https://zeynephusnakocacenk.github.io/realtime-surgical-gesture-jigsaws/)
 
-# From Offline to the Operating Room: Real-Time Surgical Gesture and Skill Recognition on JIGSAWS
+# Real-Time Causal Sequence Models for Clinical Event Detection
 
-Most surgical gesture recognition results on JIGSAWS are reported **offline**: the model sees the
-entire recording, then labels every frame. A system that coaches or monitors a surgeon during a
-procedure cannot do that. At time *t* it only has frames 0..*t*, and it has a fixed time budget to
-answer before the next frame arrives.
+**Detecting freezing of gait in Parkinson's disease from wearable sensors, frame by frame, within a 31 ms budget, evaluated on patients the model has never seen. The same framework is ready for surgical gesture and skill recognition on JIGSAWS (awaiting data access).**
 
-This project measures that gap directly. It trains causal and acausal sequence models on JIGSAWS
-robot kinematics under the standard Leave-One-User-Out protocol and evaluates each one twice:
-offline, as in the literature, and **online**, under the constraints of a live system.
+> **Abstract.** Most published detectors are evaluated offline: the model sees a whole recording, then
+> labels it. A wearable or operating-room system must decide at time *t* from samples up to *t*, within a
+> fixed time budget, for a patient it has never seen. This project builds causal sequence models that
+> stream one frame at a time in constant time and evaluates them the way they would be deployed: leave one
+> patient out, every choice made on separate validation patients, event-level metrics, 95% confidence
+> intervals over patients, calibration, abstention and simulated sensor faults. On the Daphnet dataset
+> (10 patients, 237 freezing episodes), the model selected on validation patients (a causal TCN with
+> spectral input features) ranks freeze frames better than the clinical-signal baseline, the Freeze Index,
+> in **all 8 held-out patients** (PR-AUC 0.641 vs 0.414), raises alarms with higher event F1 in 7 of 8
+> patients (58.5 vs 52.1) and flags freezes about 0.8 s earlier, at well under 1 ms per frame. A LangGraph
+> agent turns each session into a reviewer-ready summary whose every number is checked against the
+> detector output. Research prototype; no clinical claims.
 
-It extends my undergraduate thesis at Carleton University, a real-time surgical skill classification
-pipeline (PyTorch BiLSTM/TCN inside 3D Slicer, under 25 ms inference) built on simulated motion
-tracking data ([repo](https://github.com/ZeynepHusnaKocacenk/realtime-surgical-skill-analysis-3dslicer)).
-Here the same model families are tested on real da Vinci kinematics with the benchmark's standard
-evaluation protocol.
+## Key results (8 held-out patients, 3 seeds, 95% CI over patients)
 
-## Questions this project answers
-
-1. **How much accuracy do the usual offline models lose when they cannot see the future?**
-2. **Which architectures fit a real-time budget**, and does their latency stay constant as a
-   procedure gets longer?
-3. **How quickly after a gesture starts** does an online model recognise it?
-4. **How early in a trial** can a surgeon's skill level be estimated?
-
-## Method
-
-### Data and protocol
-* **JIGSAWS** (Gao et al., 2014): da Vinci kinematics at 30 Hz from 8 surgeons of varying skill
-  performing Suturing, Knot-Tying and Needle-Passing, with frame-level gesture labels and
-  self-reported skill (Novice / Intermediate / Expert).
-* **Features:** the 38 patient-side manipulator (PSM) variables by default (position, rotation,
-  linear and angular velocity, gripper angle for both arms). Master-side variables can be added
-  with `--manipulators`.
-* **Leave-One-User-Out (LOUO):** each fold holds out every trial of one surgeon. No surgeon appears
-  in both training and test data, so models cannot succeed by recognising an individual's style.
-  Normalisation statistics are fitted on the training fold only. Models train for a fixed number of
-  epochs, and the held-out surgeon is never used for early stopping or model selection.
-* Kinematics are downsampled to 10 Hz by default, which gives a **100 ms per-frame budget**.
-
-### Models
-All models share the same input projection, a per-frame gesture head and a skill head on a running
-mean of frame features, so they differ only in their temporal backbone.
-
-| Model | Sees the future? | How it runs live |
-|---|---|---|
-| **TCN-causal** | No | Dilated causal convolutions with per-layer caches; one new time step per layer per frame |
-| **LSTM** (uni-directional) | No | Carries its hidden state; constant cost per frame |
-| **TCN-acausal** | Yes (centred kernels) | Must be re-run on the full history |
-| **BiLSTM** | Yes (backward pass) | Must be re-run on the full history |
-
-The TCN follows the single-stage MS-TCN design (Farha & Gall, 2019): dilated residual layers with a
-temporal smoothing loss that reduces over-segmentation. Gesture recognition and skill assessment are
-learned jointly.
-
-### Efficient streaming for the causal TCN
-`TCN.stream_step` does not re-run the network on a window of past frames. Each dilated layer keeps a
-cache of its last `(kernel-1)*dilation` inputs (zeros at the start, which is exactly the causal zero
-padding of the offline pass). A new frame computes **one** new time step per layer from that cache,
-so the work per frame is a fixed number of multiply-accumulates: it grows linearly with depth, not
-with the receptive field (which doubles with every layer), and it does not depend on how long the
-procedure has run. `tests/test_pipeline.py` checks that the streamed outputs equal the offline pass
-and that the per-frame cost is identical at every frame.
-
-### Offline vs. online evaluation
-* **Offline:** each model labels a trial after seeing all of it.
-* **Online:** causal models produce exactly the same outputs live as offline. This is verified by a
-  unit test that streams frames one at a time through `stream_step` and checks the result against the
-  offline pass. Acausal models are re-run on the history every *k* frames (`--recompute-stride`) and
-  hold their last answer in between, as a deployed system would have to.
-
-### Metrics
-| Metric | What it measures |
-|---|---|
-| Frame accuracy | % of frames labelled correctly |
-| Edit score | Segment-order correctness; penalises flickering predictions (Lea et al., 2016) |
-| F1@{10, 25, 50} | Segment detection at IoU thresholds (Lea et al., 2017) |
-| Per-update latency | Median and p95 ms at batch size 1, measured at 10 s to 5 min of elapsed procedure time |
-| Detection delay | Time from a gesture's onset until the online model first outputs the correct label |
-| Early skill accuracy | Skill accuracy after observing 10%, 25%, 50%, 75%, 100% of a trial |
-
-## Results
-
-> **To be filled in after running on JIGSAWS.** `python main.py --data-dir <path>/Suturing` writes
-> `results/results.md` (tables) and five figures to `results/figures/`.
-
-Figures produced:
-* `accuracy_vs_latency.png`: online accuracy against per-update latency, with the frame budget marked
-* `offline_vs_online.png`: what each model loses when restricted to past frames
-* `latency_vs_history.png`: latency as the procedure gets longer (causal flat, acausal growing)
-* `gesture_timeline.png`: ground truth vs. online predictions on a held-out surgeon
-* `early_skill.png`: skill accuracy vs. fraction of the trial observed
-
-## Results: Daphnet Freezing of Gait
-
-Real data: the Daphnet dataset (Bachlin et al., 2010; UCI), 10 Parkinson's patients, three 3-axis
-accelerometers (ankle, upper leg, trunk), 64 Hz. These are the results this project currently has;
-JIGSAWS results are pending dataset access. Full tables are in
-[`results/daphnet/results.md`](results/daphnet/results.md), raw per-fold numbers in
-`results/daphnet/results.json`.
-
-### Protocol
-* **Data:** frames annotated "not part of experiment" are dropped, and recordings are split wherever
-  they were interrupted, so no sequence spans a gap. Signals are averaged in pairs to 32 Hz (a causal
-  operation), giving a **31.3 ms** frame budget. Normalisation uses the training subjects only.
-* **Leave-one-subject-out, with validation subjects.** Each fold holds out one subject. Two further
-  subjects (that have freezes, drawn by seed) are held out of the training set as **validation
-  subjects**. They are used for epoch selection (best validation PR-AUC) and for **every decision
-  threshold**; the test subject is never used for any choice. Test subjects with no freeze episodes
-  (S04, S10) are skipped, so 8 test folds remain; S04 and S10 are still used for training.
-* **Seeds:** 3 (0, 1, 2). The validation subjects, initialisation and data order change with the seed.
-  Event metrics are pooled over the 8 test subjects within a seed and reported as mean ± std across
-  seeds. Sensitivity, specificity and PR-AUC are per fold, mean ± std across seeds and folds.
-* **Models:** the four models from above (hidden size 32, 6 TCN layers, 12 epochs, class-weighted
-  cross-entropy on 8 s windows). Online acausal models are re-run on the last 10 s every 250 ms.
-* **Non-learned baseline:** the Freeze Index (Moore et al., 2008): power in 3 to 8 Hz divided by power
-  in 0.5 to 3 Hz on the ankle vertical axis, over a causal 4 s window, thresholded. The FI threshold
-  and a minimum-power threshold are chosen on the validation subjects.
-* **Metrics.** Freeze frames are the minority class (**12.8%** of test frames; 237 episodes), so frame
-  accuracy is not the headline. A *predicted event* is a run of positive frames, merging runs less than
-  1 s apart. An episode is *detected* if any positive frame falls inside it (recall); a predicted event
-  is *correct* only if at least half of its frames are freeze (precision), so an always-on detector
-  scores zero precision. Also reported: sensitivity, specificity, PR-AUC, false alarms per minute, and
-  detection delay (onset to first positive frame).
-
-### Online results (deployable setting; mean ± std across 3 seeds)
-
-| Model | Causal | Event precision | Event recall | Event F1 | PR-AUC | Median onset delay (ms) | False alarms / min | Latency median (ms) |
-|---|---|---|---|---|---|---|---|---|
-| Freeze Index (baseline) | yes | 47.5 ± 2.6 | 57.8 ± 2.8 | 52.1 ± 2.6 | 0.265 ± 0.122 | 1094 | 0.68 ± 0.04 | n/a |
-| TCN-causal | yes | 38.3 ± 3.4 | 65.5 ± 8.4 | 48.1 ± 3.9 | 0.528 ± 0.167 | 250 | 1.11 ± 0.07 | 0.49 |
-| TCN-acausal | no | 39.9 ± 8.3 | 61.0 ± 6.2 | 47.5 ± 5.9 | 0.520 ± 0.177 | 359 | 1.00 ± 0.18 | 3.08 |
-| LSTM | yes | 17.6 ± 2.3 | 57.0 ± 2.1 | 26.7 ± 2.6 | 0.376 ± 0.186 | 0 | 1.63 ± 0.16 | 0.16 |
-| BiLSTM | no | 25.2 ± 2.4 | 61.6 ± 6.8 | 35.7 ± 3.4 | 0.363 ± 0.195 | 156 | 1.60 ± 0.19 | 17.4 |
-
-Offline vs. online event F1: TCN-causal 48.1 vs 48.1 (identical by construction), TCN-acausal 48.0 vs
-47.5, LSTM 26.7 vs 26.7, BiLSTM 31.8 vs 35.7. Latency is the median per update at 60 s of elapsed time
-for acausal models re-run on the whole history (the causal models do not depend on elapsed time); the
-online acausal evaluation above re-runs them on a bounded 10 s window instead (TCN-acausal 1.5 ms,
-BiLSTM 3.0 ms per update at 10 s).
-
-### What the results say
-* The **causal TCN has the best PR-AUC** (0.53, about twice the Freeze Index's 0.27) and detects
-  freeze onsets about **0.8 s earlier** than the Freeze Index (median 250 ms vs 1094 ms), at 0.5 ms
-  per frame, constant as the recording gets longer.
-* At the validation-selected operating points, its **event F1 (48.1 ± 3.9) is not better than the
-  Freeze Index (52.1 ± 2.6)**: the learned model finds more episodes (recall 65.5% vs 57.8%) at the cost
-  of more false alarms (1.1 vs 0.7 per minute). With 3 seeds the difference is within noise.
-* The causal TCN loses nothing when restricted to the past; the LSTM variants are clearly worse on
-  this task.
-* Results vary a lot between subjects (per-subject event F1 from 14 to 70 for the causal TCN), as in
-  the literature; see the per-subject tables in `results/daphnet/results.md`.
-
-Figures: `results/daphnet/figures/offline_vs_online.png`, `per_subject_f1.png`,
-`latency_vs_history.png`, `recall_vs_false_alarms.png`.
-
-### Limitations
-* Small cohort (10 patients, 8 evaluable), recorded in a lab with scripted walking tasks designed to
-  provoke freezes. Results do not transfer to free-living use and are **not clinical claims**.
-* Models are small and trained for a fixed 12 epochs with no hyper-parameter search, so the learned
-  models may be under-tuned; the event metrics depend on the merge-gap and the 50% rule above.
-* Three seeds give only a rough estimate of variability, and the validation subjects change with the
-  seed. Latency was measured on a shared CPU container.
-* Detection delay is measured only for detected episodes.
-
-## Robustness and safe abstention
-
-Real Daphnet data, the same 96 trained models as above (3 seeds x 8 folds x 4 models), no retraining:
-`python main.py --dataset daphnet --robustness --data-dir <daphnet folder>`. Full tables:
-[`results/daphnet/robustness.md`](results/daphnet/robustness.md). Figures:
-`results/daphnet/figures/robustness.png` and `abstention.png`. Every choice (temperature, decision
-threshold, abstention threshold, Freeze Index thresholds) was made on the validation subjects of the
-fold, on clean data. Thresholds are **not** re-tuned for faulty data.
-
-**Calibration.** Temperature scaling is fitted on validation subjects (`rtsurg/calibration.py`).
-It lowers the negative log-likelihood on the test subjects (TCN-causal 0.421 to 0.372, LSTM 0.526 to
-0.446) but **does not reduce ECE**: TCN-causal 7.4% before, 8.4% after (std about 4.5 across folds);
-LSTM 12.9% to 12.5%. The fitted temperature varies a lot between folds (TCN-causal 2.6 ± 1.4), so
-what is learned on two validation subjects does not transfer reliably to a new patient. The models
-are over-confident on unseen subjects, and this calibration step only partly fixes it.
-
-**Sensor faults** (online recognition, test subjects only; drops hold the last frame, noise is Gaussian
-with std relative to each feature's training std, a stuck sensor repeats its value for 1 to 3 s,
-one event per 30 s of recording at random times). Freeze event F1, mean ± std over 3 seeds (the clean
-row uses the temperature-scaled threshold, so it differs slightly from the main table above):
-
-| Condition | Freeze Index | TCN-causal | TCN-acausal | LSTM | BiLSTM |
-|---|---|---|---|---|---|
-| clean | 52.1 ± 2.6 | 48.8 ± 4.2 | 47.8 ± 6.6 | 25.5 ± 2.6 | 36.3 ± 2.5 |
-| 20% dropped frames | 49.9 ± 2.5 | 48.7 ± 2.9 | 45.0 ± 5.4 | 27.5 ± 2.1 | 36.7 ± 0.8 |
-| noise 0.5x std | 36.2 ± 2.9 | 42.2 ± 1.9 | 40.5 ± 3.7 | 26.2 ± 1.2 | 32.5 ± 1.7 |
-| noise 1.0x std | 30.0 ± 1.8 | 35.5 ± 3.3 | 34.9 ± 0.6 | 27.0 ± 1.6 | 31.1 ± 3.7 |
-| sensor stuck 3 s | 51.0 ± 2.2 | 47.0 ± 3.8 | 46.2 ± 7.3 | 25.1 ± 2.6 | 35.9 ± 2.4 |
-
-* Dropped frames (up to 20%) and short stuck-sensor episodes (up to 3 s) change the results very little,
-  because the models integrate over several seconds.
-* **Noise is the real failure mode.** At 1.0x std, false alarms rise from 1.1 to 3.4 per minute for
-  TCN-causal (clean 256 false alarms, 758 at 1.0x std over the 8 test subjects). Recall appears to
-  rise because noise triggers alarms, so read it together with false alarms. The Freeze Index loses
-  22 F1 points at 1.0x noise, the causal TCN 13. The LSTM models are low to begin with and move little.
-  Missed freezes and false alarms for every condition are in the last table of `robustness.md`.
-
-**Abstention.** After temperature scaling, a frame whose top-class probability is below tau is
-"uncertain" and raises no alarm (tau from 0.5 to 0.9). For TCN-causal, tau 0.7 keeps 78% of frames,
-raises accuracy on those frames from 83% to 92.5%, and halves false alarms (1.14 to 0.49 per minute),
-but event recall falls from 66% to 40% (more missed freezes: 81 to 143 of 237). At tau 0.9 only 55%
-of frames get a decision and recall is 12%. Choosing tau on validation subjects (best event F1 with
-coverage of at least 80%) **selected tau 0.5 (no abstention) in all 24 TCN-causal runs and in most others**, so abstention is a way to
-trade missed freezes for fewer false alarms, not a free improvement. Whether that trade is acceptable
-is a clinical question this project does not answer.
-
-Limitations: faults are simulated, not recorded from failing sensors; the injection pattern (one stuck
-event per 30 s, independent frame drops) is one of many possible; and three seeds give rough error bars.
-
-## Deployment
-
-A design proposal, with **no clinical claims**: how a trained causal model could run on a wearable
-gateway. `python export.py --data-dir <daphnet folder>` exports each causal model as a single
-streaming step (new frame plus model state in, freeze logits plus new state out) to TorchScript and
-ONNX, quantises the ONNX model to dynamic int8, checks the outputs against the offline PyTorch pass
-(max absolute difference at most 2e-6 for fp32), and benchmarks CPU latency with one thread. Results:
-[`results/deployment.md`](results/deployment.md), figure `results/deployment_latency.png`.
-
-| TCN-causal (26.5k parameters) | Median ms / frame | Size (MB) | Event F1 (8 test subjects, seed 0) |
+| | Freeze Index (baseline) | **TCN-spectral (selected)** | Paired difference |
 |---|---|---|---|
-| PyTorch eager | 0.412 | 0.118 | not run |
-| TorchScript | 0.096 | 0.119 | not run |
-| ONNX Runtime fp32 | 0.042 | 0.115 | 52.6 |
-| ONNX Runtime dynamic int8 | 0.084 | 0.064 | 52.4 (-0.2) |
+| PR-AUC (ranking of freeze frames) | 0.414 [0.290, 0.528] | **0.641** [0.549, 0.735] | **+0.227** [+0.141, +0.314]; better in **8/8** patients, exact Wilcoxon p = 0.008 |
+| Event F1 (alarm level) | 52.1 [40.7, 58.2] | **58.5** [43.7, 68.1] | +6.3 [-3.0, +14.7]; better in 7/8 patients (P > 0: 0.92; not significant with 8 patients) |
+| Episodes detected | 57.8% | 70.7% | |
+| False alarms per minute | 0.68 | 0.63 | |
+| Median time to flag a freeze | 1094 ms | 250 ms | |
+| Compute per 31.25 ms frame | FFT | 0.35 ms (eager PyTorch, shared CPU), constant over time | |
 
-Every runtime is far inside the 31.3 ms frame budget (ONNX Runtime is about 10x faster than eager
-PyTorch). int8 halves the model size at no measurable accuracy cost here (-0.2 F1 for TCN-causal, +0.2
-for the LSTM), but at this tiny model size it is **slower** than fp32 because of quantisation
-overhead, so its only benefit is memory. Proposed design: a ring buffer of the three sensors at 64 Hz,
-2:1 averaging to 32 Hz, one ONNX step per frame with state kept in memory, a decision threshold chosen
-on held-out patients, and the abstention and fault results above as the starting points for a safety
-analysis. None of this has been tested on a device or with patients.
+![Per-patient comparison](docs/figures/analysis/per_patient_paired.png)
 
-## Reproducing everything
+**Honest reading.** The ranking improvement is consistent across every patient. The alarm-level (event F1)
+improvement is likely but not established: 8 patients cannot resolve a 6-point difference. Under a
+stricter one-to-one event matching both detectors score lower and are tied (40.8 vs 40.3).
 
-All settings live in YAML files in `configs/` (`daphnet.yaml`, `jigsaws_suturing.yaml`,
-`jigsaws_knot_tying.yaml`, `jigsaws_needle_passing.yaml`), each with the 3-seed default; results are mean
-and std across seeds and folds. `python main.py --config configs/daphnet.yaml --data-dir <folder>` runs one
-config (command-line flags override the file).
+---
 
-```bash
-./run_all.sh        # every config, then rebuilds docs/index.html
+## 1. What this project is aiming at
+
+**The clinical problem.** Freezing of gait (FoG) is a sudden, brief inability to step forward that affects
+many people with Parkinson's disease and is a leading cause of falls. Rhythmic cues (a beat, a vibration)
+delivered at the moment of a freeze can help a person start walking again, which requires a detector that
+works **in real time on a wearable**, for **a person it was not trained on**.
+
+**The methodological problem.** Many reported FoG and surgical-gesture results use evaluation that a
+deployed system could not reproduce: the model sees future samples, the same person appears in training
+and test data, or thresholds are tuned on the test data. Such numbers do not predict deployed performance.
+
+**The aims of this project:**
+
+1. Build models that only use the past and run in **constant time per frame**, and prove it with tests.
+2. Evaluate them **as they would be deployed**: unseen patients, decisions fixed in advance on separate
+   validation patients, event-level metrics a clinician understands (episodes caught, false alarms per
+   minute, delay), and uncertainty across patients.
+3. Measure the things that matter for a medical device beyond accuracy: **calibration, abstention,
+   robustness to sensor faults, latency, model export**, and document them in a **model card**.
+4. Show how a **language-model agent** can sit on top of a medical signal pipeline **safely**: it writes,
+   code computes, and a verifier blocks invented numbers and clinical advice.
+5. Apply the same real-time framework to **surgical gesture and skill recognition (JIGSAWS)** once the
+   data is available; the pipeline, configs and leakage tests are ready.
+
+## 2. What was done, step by step
+
+| Step | What | Where |
+|---|---|---|
+| 1 | Load Daphnet (3 accelerometers at 64 Hz), drop unannotated frames, split at gaps, average to 32 Hz (a causal operation; 31.25 ms per frame) | `rtsurg/daphnet.py` |
+| 2 | Leave-one-patient-out folds; in each fold 2 other patients become **validation patients** used for every choice; the test patient is never used for any choice | `loso_splits`, tests in `tests/test_daphnet.py` |
+| 3 | Baseline: the **Freeze Index** (Moore et al., 2008), its thresholds tuned on validation patients | `freeze_index`, `select_fi_thresholds` |
+| 4 | Learned models: causal TCN with per-layer streaming caches, LSTM, and acausal TCN and BiLSTM for comparison | `rtsurg/models.py` |
+| 5 | Event metrics (lenient and strict), threshold and debounce selection on validation patients | `rtsurg/fog.py` |
+| 6 | Model development: causal spectral input features, deeper receptive field, noise augmentation; **four variants**, choice by **validation PR-AUC** | `rtsurg/features.py`, `configs/daphnet_*.yaml` |
+| 7 | **Hyperparameter search** over 16 configurations, scored on validation patients only | `rtsurg/hparam_search.py` |
+| 8 | Uncertainty: bootstrap over patients, paired comparisons, exact Wilcoxon test | `rtsurg/stats.py`, `rtsurg/fog_summary.py` |
+| 9 | Calibration (temperature scaling), abstention, simulated sensor faults | `rtsurg/robust_run.py` |
+| 10 | Deployment: export a single streaming step to TorchScript, ONNX and int8 ONNX | `export.py` |
+| 11 | Real-data streaming demo on a held-out patient | `demo_daphnet.py` |
+| 12 | LangGraph session-report agent with a verification gate | `rtsurg/report_agent.py` |
+| 13 | Figures, model card, technical report, project page | `rtsurg/analysis_figures.py`, `MODEL_CARD.md`, `docs/` |
+
+```mermaid
+flowchart LR
+    A["3 accelerometers, 64 Hz"] -->|2:1 average| B["32 Hz frames, 31.25 ms budget"]
+    B --> C["causal featurizer: 2 s band powers"]
+    C --> D["causal TCN: per-layer caches, constant cost per frame"]
+    D --> E["p(freeze)"]
+    E --> F["threshold + debounce, chosen on validation patients"]
+    F --> G["alarm stream"]
+    G --> H1
+    subgraph H["LangGraph session-report agent"]
+        direction TB
+        H1["analyze: deterministic facts"] --> H2["draft: Claude"]
+        H2 --> H3{"verify: numbers and language"}
+        H3 -- "fail" --> H4["revise"] --> H2
+        H3 -- "3 failures or refusal" --> H5["template fallback"]
+        H3 -- "pass" --> H6["finalize + disclaimer"]
+        H5 --> H6
+    end
 ```
 
-`run_all.sh` does **not** re-train Daphnet when the saved results already come from the same config
-(`--skip-if-reproduced` compares seeds, epochs, model sizes and protocol settings with the saved
-`results.json` and only rebuilds tables and figures); JIGSAWS tasks whose data folder is missing are
-reported as "awaiting dataset access" and skipped. `make_report.py` turns `results/*` into the static page
-`docs/index.html` (tables plus all figures), published by `.github/workflows/pages.yml`. JIGSAWS sections of
-the page stay "awaiting dataset access" until a non-synthetic JIGSAWS run exists; synthetic runs are never
-shown as results. To publish, enable GitHub Pages once: repository Settings, Pages, Source = GitHub Actions.
+## 3. How the evaluation works
 
-## Running on JIGSAWS (when you have access)
+* **Patients, not frames, are the unit.** For each of the 8 patients who froze, that patient is the test
+  set; two other freezing patients (drawn by seed) are validation patients; the rest train. S04 and S10
+  never froze and are only used for training. 3 seeds change the validation draw, initialisation and data order.
+* **Every choice on validation patients:** training epoch, decision threshold, alarm debounce, Freeze Index
+  thresholds, temperature, abstention level, model variant and hyperparameters.
+* **Event metrics.** A predicted event is a run of alarm frames (runs less than 1 s apart merged). It is
+  *correct* only if at least half its frames are annotated freeze, so an always-on detector scores nothing.
+  An episode is *detected* if an alarm frame falls inside it. A **strict** one-to-one matching is reported
+  alongside, because the lenient version can reward splitting one freeze into several alarms.
+* **Uncertainty.** 95% CIs come from resampling the 8 test patients (2000 times); paired comparisons
+  resample the same patients for both detectors. With 8 patients the smallest possible Wilcoxon p-value is 0.008.
 
-Put the unzipped dataset anywhere (it must not be committed) and run one command. `--root` is the folder
-that contains `Suturing/`, `Knot_Tying/` and `Needle_Passing/`; nested folders such as `Suturing/Suturing/`
-are found automatically.
+## 4. Results
+
+### Model development: four variants, chosen on validation patients
+
+| Variant (all causal TCNs) | Validation PR-AUC (used to choose) | Test PR-AUC [95% CI] | Test event F1 [95% CI] | False alarms / min |
+|---|---|---|---|---|
+| TCN-causal: 6 layers (4 s), raw input, 12 epochs | 0.462 | 0.528 [0.429, 0.631] | 48.1 [34.0, 59.3] | 1.11 |
+| + deeper (8 layers, 16 s) + noise augmentation, raw input | 0.486 | 0.496 [0.372, 0.617] | 47.8 [32.4, 61.0] | 0.85 |
+| + deeper + spectral features + noise augmentation | 0.589 | 0.598 [0.501, 0.702] | 52.0 [35.9, 64.3] | 0.83 |
+| **TCN-spectral: deeper + spectral features** (selected) | **0.615** | **0.641** [0.549, 0.735] | **58.5** [43.7, 68.1] | **0.63** |
+
+![Model selection](docs/figures/analysis/model_selection.png)
+
+* **Spectral features are what helped.** Giving the network the causal log power in the locomotor
+  (0.5 to 3 Hz) and freeze (3 to 8 Hz) bands of each axis, the ingredients of the Freeze Index, lifts
+  validation and test PR-AUC by more than 0.1. A small network trained on 7 patients does not rediscover
+  this frequency shift from raw accelerations.
+* **Noise augmentation hurt.** It lowers clean accuracy and, in the fault study, does not make the model
+  more robust to noise (section 5). This is reported, not hidden.
+* The variant chosen on validation patients is also the best on the test patients, and the second keeps its place;
+  only the two weakest variants swap places on test (0.528 vs 0.496), well inside their CIs.
+
+SEARCH_SECTION
+
+### All detectors
+
+Full table, including LSTM, BiLSTM, acausal TCN and a debounced operating point for every detector:
+[`results/daphnet_summary.md`](results/daphnet_summary.md).
+
+| Detector | Event F1 [95% CI] | Strict F1 | Recall | Precision | False alarms / min | PR-AUC [95% CI] |
+|---|---|---|---|---|---|---|
+| Freeze Index (baseline) | 52.1 [40.7, 58.2] | 40.3 | 57.8 | 47.5 | 0.68 | 0.414 [0.290, 0.528] |
+| **TCN-spectral** (causal, selected) | **58.5** [43.7, 68.1] | **40.8** | **70.7** | **50.1** | **0.63** | **0.641** [0.549, 0.735] |
+| TCN-causal (causal) | 48.1 [34.0, 59.3] | 36.2 | 65.5 | 38.3 | 1.11 | 0.528 [0.429, 0.631] |
+| TCN-acausal (sees 10 s of past, re-run every 250 ms) | 47.5 [34.1, 57.0] | 35.9 | 61.0 | 39.9 | 1.00 | 0.520 [0.409, 0.638] |
+| BiLSTM (acausal) | 35.7 [21.3, 49.0] | 24.6 | 61.6 | 25.2 | 1.60 | 0.363 [0.253, 0.486] |
+| LSTM (causal) | 26.7 [16.7, 39.5] | 18.5 | 57.0 | 17.6 | 1.63 | 0.376 [0.273, 0.479] |
+
+| | |
+|---|---|
+| ![Operating points](docs/figures/analysis/operating_points.png) | ![Onset delay](docs/figures/analysis/onset_delay.png) |
+
+* **Causal is enough.** Models that are not allowed to see the future lose nothing here; the acausal models
+  must be re-run on recent history online and do no better.
+* **Earlier alarms.** The learned models flag a freeze a median 250 ms after it starts; the Freeze Index
+  needs about 1.1 s because its 4 s window must fill with freeze-band power.
+* **Per patient** event F1 ranges from 20 to 75 for TCN-spectral and 20 to 64 for the Freeze Index; patient
+  S01 is hard for every learned model. Between-patient variation is the main source of uncertainty.
+* **What did not help:** a validation-chosen minimum alarm duration (debounce) helps the Freeze Index (55.0)
+  but not the learned models; LSTMs are clearly worse on this task.
+
+## 5. Calibration, abstention and sensor faults
+
+![Robustness to sensor noise](docs/figures/analysis/robustness_noise.png)
+
+* **Dropped frames** (up to 20%) and **stuck sensors** (up to 3 s) barely change any detector.
+* **Gaussian noise is the failure mode** for all detectors: at noise of 1x the feature standard deviation,
+  false alarms rise about 3 to 5 times (TCN-spectral 0.62 to 3.30 per minute; Freeze Index 0.68 to 3.47).
+  The spectral features import the Freeze Index's weakness (noise adds freeze-band power), so the raw-input
+  TCN degrades least. Noise augmentation during training did not fix this.
+* **Calibration.** Temperature scaling, fitted on two validation patients, lowers the log-loss but barely
+  changes the expected calibration error (TCN-spectral 8.4% to 7.9%; TCN-causal 7.4% to 8.4%), and the fitted
+  temperature varies between folds: probabilities are not calibrated risk for a new patient.
+* **Abstention** (no alarm when the model is unsure) cuts false alarms but misses more freezes; validation
+  never chose it. Details: [`results/daphnet/robustness.md`](results/daphnet/robustness.md),
+  [`results/daphnet_spectral/robustness.md`](results/daphnet_spectral/robustness.md).
+
+## 6. Real-data streaming demo
 
 ```bash
-python run_jigsaws.py --root /path/to/JIGSAWS --check   # validates the folders and prints a data summary
-python run_jigsaws.py --root /path/to/JIGSAWS --quick   # 1 seed, 2 models, 5 epochs: sanity run, not a result
-python run_jigsaws.py --root /path/to/JIGSAWS           # full benchmark: 3 tasks x 3 seeds x 4 models
+python demo_daphnet.py --data-dir data/daphnet        # Daphnet from the UCI repository; not included here
 ```
 
-The full run trains every model on every leave-one-user-out fold and takes several hours on a CPU (a GPU
-helps: use `--extra --latency-device cuda` only for latency; training uses CUDA automatically when
-available). Results go to `results/jigsaws_<task>/` (tables and figures) and `docs/index.html` is rebuilt,
-so the project page replaces "awaiting dataset access" with the real tables. `--tasks Suturing` runs one task.
-The loader has been tested only on generated data in the documented JIGSAWS layout, so run `--check` first.
+Replays held-out patient S05 (a typical patient, not the best one) frame by frame through the shipped
+TCN-spectral checkpoint (`assets/`, trained without S05; threshold and debounce from that fold's validation
+patients), checks the streamed output against the offline pass (max difference 4e-7) and writes a timeline
+and a session summary to `docs/demo/`. All 66,880 frames were processed within the 31.25 ms budget.
 
-## Running it
+![Streaming demo on a held-out patient](docs/demo/stream_S05.png)
 
-Streaming demo (**SYNTHETIC DATA, pipeline demo, not a result**): `python demo_stream.py` trains a
-small causal TCN on generated data, streams one held-out trial frame by frame, and prints the
-predicted and true gesture, per-frame latency, and how many frames stayed within the 100 ms budget.
+For this patient the model catches the strong, long freezes quickly but misses short, weak ones (25 of 66
+episodes, 11 false alarms): the honest picture of where it stands.
+
+## 7. Session-report agent (LangGraph + Claude, with guardrails)
+
+`rtsurg/report_agent.py` turns a session's per-frame output into a short summary for a research team. The
+design assumes a language model is good at prose and must not be trusted with numbers or clinical judgement:
+
+* **analyze** (code) computes the facts: alarms, timings, confidence, stuck-sensor checks, and agreement with
+  the annotation when it exists. The model never sees raw signals and never computes anything.
+* **draft** (Claude `claude-opus-5-5` through the official `anthropic` SDK, server-side refusal fallback on)
+  writes four fixed sections from the facts.
+* **verify** (code) rejects any number or time stamp not in the facts, any diagnostic, treatment, medication or
+  dosing language, missing sections, and drafts that ignore a quality flag.
+* **revise** returns the findings to the model (append-only history), at most twice; after that, or on a refusal
+  or API error, a deterministic **template** writes the summary. A disclaimer is always appended.
+
+Without an API key the template writer stands in for Claude, so the graph runs and is tested offline
+(`tests/test_report_agent.py` checks that invented numbers, invented time stamps and dosing advice are caught
+and that revision and fallback work). Example: [`docs/demo/session_S05.md`](docs/demo/session_S05.md). The live
+Claude path needs `ANTHROPIC_API_KEY` and has not been run in CI.
+
+## 8. Deployment (design proposal)
+
+`python export.py --data-dir <daphnet folder>` exports each causal model as one streaming step (frame + state
+in, logits + state out) to TorchScript, ONNX and dynamic int8 ONNX, verifies the outputs against PyTorch and
+benchmarks one CPU thread ([`results/deployment.md`](results/deployment.md)). For the baseline TCN, ONNX Runtime
+takes 0.042 ms per frame (about 10x faster than eager PyTorch); int8 halves the file size with a 0.2 point F1
+change but is slower at this tiny size. TCN-spectral (35k parameters) adds one 64-point FFT per axis per frame
+and is not yet exported. Nothing has been tested on a device or with patients.
+
+## 9. JIGSAWS: surgical gesture and skill recognition (awaiting data)
+
+The same causal and acausal models, trained jointly for frame-wise gesture recognition and trial-level skill
+(novice, intermediate, expert) on da Vinci kinematics, evaluated offline and online with frame accuracy, edit
+score, F1@{10, 25, 50}, gesture detection delay, early skill accuracy and latency. Two protocols: **LOUO** (leave
+one surgeon out: new surgeons) and **LOSO** (leave one supertrial out, `--protocol loso`, the protocol most
+published gesture results use).
+
+```bash
+python run_jigsaws.py --root /path/to/JIGSAWS --check   # validates folders, prints a data summary
+python run_jigsaws.py --root /path/to/JIGSAWS --quick   # sanity run, not a result
+python run_jigsaws.py --root /path/to/JIGSAWS           # 3 tasks x 3 seeds x 4 models (LOUO)
+python main.py --config configs/jigsaws_suturing.yaml --data-dir /path/to/JIGSAWS/Suturing --protocol loso
+```
+
+The loader has only been tested on generated files in the documented JIGSAWS layout. The data must never be
+committed (its licence forbids redistribution). No JIGSAWS number appears anywhere until a real run exists, and
+a test stops synthetic numbers from being shown as results.
+
+## 10. Reproduce
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q tests                     # correctness tests, about 1 min
-
-# Pipeline check without the dataset: generates mock data in the exact JIGSAWS file layout.
-# SYNTHETIC DATA, pipeline demo, not a result: these numbers are meaningless, they only show
-# that everything runs.
-python main.py --synthetic --epochs 15 --max-folds 3
-
-# Daphnet (folder holding the SxxRyy.txt files; the data is not included in this repository)
-python main.py --dataset daphnet --data-dir /path/to/dataset_fog_release/dataset
-
-# Real JIGSAWS (one task folder, all 8 LOUO folds)
-python main.py --data-dir /path/to/JIGSAWS/Suturing --epochs 60 --verbose
+python -m pytest -q tests                 # 50 tests: leakage, causality, streaming equality, metrics, stats, agent
+./run_all.sh                              # every config; skips training when saved results match the config
+python -m rtsurg.hparam_search            # validation-only hyperparameter search (about 1.5 h on 4 cores)
+python -m rtsurg.fog_summary              # headline table with bootstrap CIs and paired tests
+python -m rtsurg.analysis_figures         # figures in docs/figures/analysis/
+python make_report.py                     # docs/index.html (GitHub Pages)
 ```
 
-Useful options: `--models TCN-causal LSTM`, `--downsample 1` (full 30 Hz),
-`--recompute-stride 1` (re-run acausal models every frame, slower to evaluate),
-`--latency-device cuda`, `--manipulators MTM_L MTM_R PSM_L PSM_R`.
+Each Daphnet configuration takes 15 to 35 minutes on 4 CPU cores. Re-running the original baseline in this
+revision reproduced all 216 of its per-fold result rows exactly (same event counts, same thresholds).
 
-JIGSAWS is distributed by Johns Hopkins University for non-commercial research and is not included
-in this repository.
+## 11. What is missing (roadmap)
+
+* **External validation:** train on Daphnet, test on a second FoG dataset (for example the Michael J. Fox
+  Foundation tDCS FoG / DeFOG recordings, lower-back sensor). This is the most valuable next step.
+* **More patients:** 8 test patients cannot resolve differences below about 10 F1 points.
+* **Real sensor faults** instead of simulated ones, and robustness that does not rely on band power under noise.
+* **Per-patient calibration** from a short enrolment recording; probabilities are not calibrated today.
+* **Export TCN-spectral** (featurizer + network) to ONNX and measure it on an embedded board.
+* **JIGSAWS results** once data access is granted; then video features.
+* **Live run of the agent** with an API key, plus an evaluation set for its summaries.
+
+## Documentation
+
+* [`docs/technical_report.md`](docs/technical_report.md): methods, all results, review and audit notes.
+* [`MODEL_CARD.md`](MODEL_CARD.md): intended use, data, performance, failure modes.
+* [`CITATION.cff`](CITATION.cff): how to cite.
 
 ## Project structure
 
 ```
 rtsurg/
-  data.py        JIGSAWS loader, synthetic generator (same file format), LOUO splits, normalisation
-  models.py      causal/acausal TCN, LSTM/BiLSTM, frame-by-frame streaming API
-  train.py       joint gesture + skill training with temporal smoothing loss
-  metrics.py     frame accuracy, edit score, F1@k, detection delay
-  benchmark.py   offline vs. online evaluation, early skill curve, latency profiler
-  daphnet.py     Daphnet loader, leave-one-subject-out splits with validation subjects, Freeze Index
-  fog.py         event-level metrics, threshold selection, windowed training, online evaluation
-  fog_run.py     Daphnet benchmark driver (3 seeds in parallel)
-  fog_report.py  Daphnet tables and figures
-  config.py      checks that saved results come from a given config
-  calibration.py temperature scaling and ECE
-  robustness.py  sensor-fault injectors
-  robust_run.py / robust_report.py  calibration, fault and abstention evaluation
-configs/         YAML settings for every benchmark
-run_all.sh       runs every config and rebuilds the page
-make_report.py   results/* -> docs/index.html (GitHub Pages)
-export.py        ONNX / TorchScript / int8 export and latency benchmark
-  plots.py       figures
-main.py          runs the full LOUO benchmark and writes tables and figures
-tests/           loader, leakage, metric, causality and streaming-equivalence tests
+  daphnet.py         Daphnet loader, leave-one-patient-out splits with validation patients, Freeze Index
+  features.py        causal spectral features (log band powers, log Freeze Index)
+  models.py          causal/acausal TCN, LSTM/BiLSTM, constant-time streaming API
+  fog.py             event metrics (lenient and strict), debounce, threshold selection, training
+  fog_run.py         Daphnet benchmark driver;  fog_report.py: per-run tables and figures
+  hparam_search.py   validation-only hyperparameter search
+  stats.py           patient-level bootstrap CIs, paired comparisons, exact Wilcoxon test
+  fog_summary.py     headline table across runs and validation-based model selection
+  analysis_figures.py  figures for the README and project page
+  calibration.py, robustness.py, robust_run.py, robust_report.py   calibration, faults, abstention
+  report_agent.py    LangGraph session-report agent with a verification gate
+  data.py, train.py, metrics.py, benchmark.py, jigsaws_check.py    JIGSAWS pipeline (LOUO and LOSO)
+configs/             one YAML per experiment
+demo_daphnet.py      real-data streaming demo;  demo_stream.py: synthetic JIGSAWS-format demo
+export.py            ONNX / TorchScript / int8 export and latency benchmark
+main.py, run_all.sh, run_jigsaws.py, a.py, make_report.py
+tests/               50 tests
 ```
 
 ## Limitations
 
-* JIGSAWS is small (8 surgeons, 39 Suturing trials), so fold-to-fold variance is large; results are
-  reported as mean ± standard deviation over folds.
-* Under LOUO, skill classification depends on very few surgeons per skill level (e.g. 2 experts), which
-  makes it much harder than the commonly reported leave-one-supertrial-out setting. Skill results here
-  should be read as a stress test, not compared directly with LOSO numbers.
-* Latency is measured on the machine that runs the benchmark; the hardware is recorded in
-  `results/results.json`.
-* Kinematics only. Video features are a natural next step.
+* 8 evaluable patients from one lab study with walking tasks designed to provoke freezing. Nothing here
+  transfers to free-living use, other devices or other populations, and nothing is a clinical claim.
+* Sensor faults are simulated. Latency was measured on a shared cloud CPU.
 
 ## References
 
-* Y. Gao et al. *JHU-ISI Gesture and Skill Assessment Working Set (JIGSAWS): A Surgical Activity
-  Dataset for Human Motion Modeling.* MICCAI Workshop M2CAI, 2014.
-* C. Lea, A. Reiter, R. Vidal, G. Hager. *Segmental Spatiotemporal CNNs for Fine-grained Action
-  Segmentation.* ECCV, 2016.
+* M. Bachlin et al. *Wearable assistant for Parkinson's disease patients with the freezing of gait symptom.* IEEE TITB, 2010.
+* S. T. Moore, H. G. MacDougall, W. G. Ondo. *Ambulatory monitoring of freezing of gait in Parkinson's disease.* J. Neurosci. Methods, 2008.
+* Y. Gao et al. *JIGSAWS: A Surgical Activity Dataset for Human Motion Modeling.* MICCAI M2CAI Workshop, 2014.
+* N. Ahmidi et al. *A Dataset and Benchmarks for Segmentation and Recognition of Gestures in Robotic Surgery.* IEEE TBME, 2017.
 * C. Lea et al. *Temporal Convolutional Networks for Action Segmentation and Detection.* CVPR, 2017.
-* Y. Abu Farha, J. Gall. *MS-TCN: Multi-Stage Temporal Convolutional Network for Action
-  Segmentation.* CVPR, 2019.
+* Y. Abu Farha, J. Gall. *MS-TCN: Multi-Stage Temporal Convolutional Network for Action Segmentation.* CVPR, 2019.
+* M. Mitchell et al. *Model Cards for Model Reporting.* FAT*, 2019.
 
 ## Author
 
-Zeynep Kocacenk, B.Sc. Computer Science (Psychology minor), Carleton University.
+Zeynep Kocacenk, B.Sc. Computer Science (Psychology minor), Carleton University. This project extends my
+undergraduate thesis, a real-time surgical skill classification pipeline inside 3D Slicer
+([repo](https://github.com/ZeynepHusnaKocacenk/realtime-surgical-skill-analysis-3dslicer)).

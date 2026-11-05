@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+message: "If you use this software or its benchmark protocol, please cite it as below."
+title: "Real-time causal sequence models for clinical event detection: freezing of gait (Daphnet) and surgical gestures (JIGSAWS)"
+type: software
+authors:
+  - family-names: Kocacenk
+    given-names: Zeynep
+    affiliation: "Carleton University"
+repository-code: "https://github.com/ZeynepHusnaKocacenk/realtime-surgical-gesture-jigsaws"
+url: "https://zeynephusnakocacenk.github.io/realtime-surgical-gesture-jigsaws/"
+license: "NOASSERTION"
+keywords:
+  - freezing of gait
+  - Parkinson's disease
+  - wearable sensors
+  - surgical gesture recognition
+  - JIGSAWS
+  - temporal convolutional networks
+  - streaming inference
+  - real-time
+  - calibration
+  - robustness
+references:
+  - type: article
+    title: "Wearable assistant for Parkinson's disease patients with the freezing of gait symptom"
+    authors:
+      - family-names: Bachlin
+        given-names: Marc
+    journal: "IEEE Transactions on Information Technology in Biomedicine"
+    year: 2010
+  - type: article
+    title: "Ambulatory monitoring of freezing of gait in Parkinson's disease"
+    authors:
+      - family-names: Moore
+        given-names: Steven T.
+    journal: "Journal of Neuroscience Methods"
+    year: 2008
+  - type: conference-paper
+    title: "JHU-ISI Gesture and Skill Assessment Working Set (JIGSAWS): A Surgical Activity Dataset for Human Motion Modeling"
+    authors:
+      - family-names: Gao
+        given-names: Yixin
+    collection-title: "MICCAI Workshop: M2CAI"
+    year: 2014
