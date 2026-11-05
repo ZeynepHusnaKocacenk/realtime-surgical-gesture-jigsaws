@@ -259,6 +259,24 @@ reported as "awaiting dataset access" and skipped. `make_report.py` turns `resul
 the page stay "awaiting dataset access" until a non-synthetic JIGSAWS run exists; synthetic runs are never
 shown as results. To publish, enable GitHub Pages once: repository Settings, Pages, Source = GitHub Actions.
 
+## Running on JIGSAWS (when you have access)
+
+Put the unzipped dataset anywhere (it must not be committed) and run one command. `--root` is the folder
+that contains `Suturing/`, `Knot_Tying/` and `Needle_Passing/`; nested folders such as `Suturing/Suturing/`
+are found automatically.
+
+```bash
+python run_jigsaws.py --root /path/to/JIGSAWS --check   # validates the folders and prints a data summary
+python run_jigsaws.py --root /path/to/JIGSAWS --quick   # 1 seed, 2 models, 5 epochs: sanity run, not a result
+python run_jigsaws.py --root /path/to/JIGSAWS           # full benchmark: 3 tasks x 3 seeds x 4 models
+```
+
+The full run trains every model on every leave-one-user-out fold and takes several hours on a CPU (a GPU
+helps: use `--extra --latency-device cuda` only for latency; training uses CUDA automatically when
+available). Results go to `results/jigsaws_<task>/` (tables and figures) and `docs/index.html` is rebuilt,
+so the project page replaces "awaiting dataset access" with the real tables. `--tasks Suturing` runs one task.
+The loader has been tested only on generated data in the documented JIGSAWS layout, so run `--check` first.
+
 ## Running it
 
 Streaming demo (**SYNTHETIC DATA, pipeline demo, not a result**): `python demo_stream.py` trains a
