@@ -260,6 +260,27 @@ def louo_splits(data: JigsawsData) -> Iterator[Tuple[str, List[Trial], List[Tria
         yield user, train, test
 
 
+def supertrial(t: Trial) -> int:
+    """Repetition index of a JIGSAWS trial (``Suturing_B003`` -> 3)."""
+    m = TRIAL_RE.match(t.name)
+    if m is None:
+        raise ValueError(f"{t.name}: not a JIGSAWS trial name")
+    return int(m.group("rep"))
+
+
+def loso_supertrial_splits(data: JigsawsData) -> Iterator[Tuple[str, List[Trial], List[Trial]]]:
+    """Leave-One-Supertrial-Out (Gao et al., 2014; Ahmidi et al., 2017): fold k holds out the k-th
+    repetition of EVERY surgeon. This is the protocol most JIGSAWS gesture-recognition papers
+    report; surgeons appear in both training and test, so it measures generalisation to new
+    repetitions, not to new surgeons (that is LOUO)."""
+    reps = sorted({supertrial(t) for t in data.trials})
+    for r in reps:
+        train = [t for t in data.trials if supertrial(t) != r]
+        test = [t for t in data.trials if supertrial(t) == r]
+        assert not ({t.name for t in train} & {t.name for t in test})
+        yield f"ST{r}", train, test
+
+
 @dataclass
 class Normalizer:
     mean: np.ndarray

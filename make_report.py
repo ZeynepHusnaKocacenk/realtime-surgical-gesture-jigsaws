@@ -99,7 +99,35 @@ Code and full README: <a href="{REPO}">{REPO.replace('https://', '')}</a>. Nothi
 <p>One real-time framework for two problems: causal sequence models that must answer within a fixed time budget as
 data streams in. Offline accuracy is compared with what a live system can achieve, with latency, calibration,
 abstention and sensor-fault robustness measured on real data.</p>"""]
-    parts.append("<h2>Daphnet Freezing of Gait (real data)</h2>")
+    if (RES / "daphnet_summary.md").exists():
+        parts.append("<h2>Headline: freezing-of-gait detection with uncertainty</h2>")
+        parts.append(md_to_html(read_md(RES / "daphnet_summary.md"), shift=2))
+        parts.append(figure(RES / "daphnet_summary.png", "Online event F1 with 95% CIs over the 8 held-out patients"))
+    ana = DOCS / "figures" / "analysis"
+    captions = {"per_patient_paired": "Per-patient event F1 and PR-AUC: Freeze Index vs the selected model",
+                "model_selection": "Model variants: validation PR-AUC (used to choose) vs test PR-AUC",
+                "operating_points": "Episodes detected vs false alarms per minute (95% CI over patients)",
+                "onset_delay": "Time from freeze onset to the first alarm",
+                "robustness_noise": "Event F1 and false alarms under simulated sensor noise"}
+    if ana.exists():
+        parts.append("<h2>Analysis figures</h2>")
+        for stem, cap in captions.items():
+            if (ana / f"{stem}.png").exists():
+                parts.append(f'<figure><img src="figures/analysis/{stem}.png" alt="{html.escape(cap)}" loading="lazy">'
+                             f"<figcaption>{html.escape(cap)}</figcaption></figure>")
+    if (RES / "hparam_search" / "search.md").exists():
+        parts.append("<h2>Validation-only hyperparameter search</h2>")
+        parts.append(md_to_html(read_md(RES / "hparam_search" / "search.md"), shift=2))
+        parts.append(figure(RES / "hparam_search" / "search.png", "Validation PR-AUC across the 16 configurations"))
+    demo = DOCS / "demo"
+    if any(demo.glob("stream_*.png")):
+        parts.append("<h2>Real-data streaming demo</h2>")
+        for img in sorted(demo.glob("stream_*.png")):
+            parts.append(f'<figure><img src="demo/{img.name}" alt="streamed patient" loading="lazy"><figcaption>'
+                         f'Held-out patient streamed frame by frame (demo_daphnet.py)</figcaption></figure>')
+        for md in sorted(demo.glob("session_*.md")):
+            parts.append(md_to_html(md.read_text(), shift=1))
+    parts.append("<h2>Daphnet Freezing of Gait (real data): full benchmark</h2>")
     if (daph / "results.md").exists():
         parts.append(md_to_html(read_md(daph / "results.md"), shift=2))
         parts.append(figure(daph / "figures" / "offline_vs_online.png", "Event F1, offline vs. online, with the Freeze Index baseline"))

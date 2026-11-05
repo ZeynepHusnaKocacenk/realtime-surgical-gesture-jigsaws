@@ -48,9 +48,20 @@ def pred_events(pred: np.ndarray, merge_gap: int) -> List[Tuple[int, int]]:
     return [tuple(v) for v in ev]
 
 
-def event_counts(preds: Sequence[np.ndarray], trues: Sequence[np.ndarray], rate_hz: float) -> Dict:
-    """Raw counts so that results can be pooled over trials, subjects and folds."""
-    gap = int(round(MERGE_GAP_S * rate_hz))
+def event_counts(preds: Sequence[np.ndarray], trues: Sequence[np.ndarray], rate_hz: float,
+                 merge_gap_s: float = MERGE_GAP_S, min_event_precision: float = MIN_EVENT_PRECISION,
+                 strict: bool = False) -> Dict:
+    """Raw counts so that results can be pooled over trials, subjects and folds.
+
+    Default (``strict=False``) is the definition in the module docstring. ``strict=True`` is a
+    one-to-one matching used as a sensitivity check: a predicted event is a true positive only if it
+    is correct (>= ``min_event_precision`` freeze frames) AND overlaps an episode that no earlier
+    event has matched; duplicates (one episode split into several alarms) count as false alarms, and
+    an episode counts as detected only if a correct event matched it. This removes two ways the
+    default metric can be generous: fragmenting one freeze into many "correct" events, and
+    "detecting" an episode with an alarm that is itself a false alarm.
+    """
+    gap = int(round(merge_gap_s * rate_hz))
     c = dict(n_true=0, detected=0, n_pred=0, correct=0, false_alarms=0, frames=0,
              tp=0, fn=0, fp=0, tn=0, delays_ms=[])
     for p, t in zip(preds, trues):
@@ -61,17 +72,45 @@ def event_counts(preds: Sequence[np.ndarray], trues: Sequence[np.ndarray], rate_
         c["tp"] += int((p & t).sum()); c["fn"] += int((~p & t).sum())
         c["fp"] += int((p & ~t).sum()); c["tn"] += int((~p & ~t).sum())
         c["n_true"] += len(truth); c["n_pred"] += len(evs)
-        for s, e in truth:
-            hit = np.flatnonzero(p[s:e])
-            if len(hit):
-                c["detected"] += 1
-                c["delays_ms"].append(float(hit[0]) * 1000.0 / rate_hz)
+        if not strict:
+            for s, e in truth:
+                hit = np.flatnonzero(p[s:e])
+                if len(hit):
+                    c["detected"] += 1
+                    c["delays_ms"].append(float(hit[0]) * 1000.0 / rate_hz)
+            for s, e in evs:
+                if t[s:e].mean() >= min_event_precision:
+                    c["correct"] += 1
+                else:
+                    c["false_alarms"] += 1
+            continue
+        matched = np.zeros(len(truth), bool)
         for s, e in evs:
-            if t[s:e].mean() >= MIN_EVENT_PRECISION:
-                c["correct"] += 1
-            else:
-                c["false_alarms"] += 1
+            ok = False
+            if t[s:e].mean() >= min_event_precision:
+                for j, (ts, te) in enumerate(truth):
+                    if not matched[j] and s < te and ts < e:
+                        matched[j] = ok = True
+                        hit = np.flatnonzero(p[ts:te])
+                        c["delays_ms"].append(float(hit[0]) * 1000.0 / rate_hz if len(hit) else 0.0)
+                        break
+            c["correct" if ok else "false_alarms"] += 1
+        c["detected"] += int(matched.sum())
     return c
+
+
+def postprocess(pred: np.ndarray, min_dur: int) -> np.ndarray:
+    """Causal-compatible debouncing: a positive run raises an alarm only once it has lasted
+    ``min_dur`` frames. Frames before that are cleared, so an alarm is never raised retroactively
+    (it adds at most ``min_dur - 1`` frames of delay). ``min_dur <= 1`` is the identity."""
+    pred = pred.astype(bool)
+    if min_dur <= 1:
+        return pred
+    out = np.zeros_like(pred)
+    for s, e in _runs(pred):
+        if e - s >= min_dur:
+            out[s + min_dur - 1:e] = True
+    return out
 
 
 def merge_counts(cs: Sequence[Dict]) -> Dict:
@@ -119,19 +158,39 @@ def average_precision(scores: np.ndarray, labels: np.ndarray) -> float:
     return float(np.sum(np.diff(np.r_[0.0, rec_d]) * prec_d))
 
 
+def _val_score(c: Dict, rate_hz: float) -> float:
+    s = summarize_counts(c, rate_hz)
+    f1 = 0.0 if s["event_f1"] != s["event_f1"] else s["event_f1"]
+    return f1 + 1e-3 * 2 * c["tp"] / max(2 * c["tp"] + c["fp"] + c["fn"], 1)   # frame F1 breaks ties
+
+
 def select_threshold(probs: Sequence[np.ndarray], trues: Sequence[np.ndarray], rate_hz: float,
                      grid: Sequence[float] = THRESHOLDS) -> float:
     """Decision threshold that maximises pooled event F1 on VALIDATION data (frame F1 breaks ties)."""
     best, best_thr = -1.0, float(grid[len(grid) // 2])
     for thr in grid:
-        c = event_counts([p >= thr for p in probs], trues, rate_hz)
-        s = summarize_counts(c, rate_hz)
-        f1 = 0.0 if s["event_f1"] != s["event_f1"] else s["event_f1"]
-        fr = 2 * c["tp"] / max(2 * c["tp"] + c["fp"] + c["fn"], 1)
-        score = f1 + 1e-3 * fr
+        score = _val_score(event_counts([p >= thr for p in probs], trues, rate_hz), rate_hz)
         if score > best:
             best, best_thr = score, float(thr)
     return best_thr
+
+
+MIN_DUR_S = (0.0, 0.25, 0.5, 1.0, 1.5)
+
+
+def select_operating_point(probs: Sequence[np.ndarray], trues: Sequence[np.ndarray], rate_hz: float,
+                           grid: Sequence[float] = THRESHOLDS, min_durs_s: Sequence[float] = MIN_DUR_S
+                           ) -> Tuple[float, int]:
+    """(threshold, debounce frames) maximising pooled event F1 on VALIDATION data."""
+    best, best_pt = -1.0, (float(grid[len(grid) // 2]), 0)
+    for thr in grid:
+        raw = [p >= thr for p in probs]
+        for d in min_durs_s:
+            n = int(round(d * rate_hz))
+            score = _val_score(event_counts([postprocess(r, n) for r in raw], trues, rate_hz), rate_hz)
+            if score > best:
+                best, best_pt = score, (float(thr), n)
+    return best_pt
 
 
 # ---------------------------------------------------------------------------------------
@@ -234,7 +293,8 @@ def train_fog_model(model: SeqModel, train_trials, val_trials, norm: Normalizer,
             if ap > best:
                 best = ap; best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
         hist.append(rec)
-    model.load_state_dict(best_state)
+    if best_state is not None:          # None only if every validation PR-AUC was NaN
+        model.load_state_dict(best_state)
     model.eval()
     return hist, best
 
@@ -247,20 +307,30 @@ def fi_scores(trials: Sequence[Trial], rate_hz: float) -> Tuple[List[np.ndarray]
     return [o[0] for o in out], [o[1] for o in out]
 
 
-def select_fi_thresholds(val_trials, rate_hz: float) -> Tuple[float, float]:
-    """(FI threshold, power threshold) maximising pooled event F1 on VALIDATION subjects."""
+def fi_gated_score(fi: np.ndarray, power: np.ndarray, power_thr: float) -> np.ndarray:
+    """The Freeze Index as the detector actually uses it: FI where the leg moves (power above the
+    validation-chosen gate), 0 elsewhere. PR-AUC of the Freeze Index is computed on this score, so
+    it is measured on the same signal its event metrics are (the ungated FI ranks standing still,
+    which the detector never alarms on, among the most freeze-like frames)."""
+    return np.where(power > power_thr, fi, 0.0)
+
+
+def select_fi_thresholds(val_trials, rate_hz: float, min_durs_s: Sequence[float] = (0.0,)
+                         ) -> Tuple[float, float] | Tuple[float, float, int]:
+    """(FI threshold, power threshold) maximising pooled event F1 on VALIDATION subjects. With
+    more than one ``min_durs_s`` value, also returns the selected debounce in frames."""
     fi, pw = fi_scores(val_trials, rate_hz)
     trues = [t.gestures for t in val_trials]
     allfi, allpw = np.concatenate(fi), np.concatenate(pw)
     fi_grid = np.unique(np.quantile(allfi[allpw > 0], np.linspace(0.3, 0.995, 40)))
     pw_grid = np.unique(np.r_[0.0, np.quantile(allpw[allpw > 0], [0.1, 0.25, 0.5, 0.75])])
-    best, best_pair = -1.0, (float(fi_grid[0]), 0.0)
+    best, best_pt = -1.0, (float(fi_grid[0]), 0.0, 0)
     for th in fi_grid:
         for pt in pw_grid:
-            c = event_counts([(f > th) & (p > pt) for f, p in zip(fi, pw)], trues, rate_hz)
-            s = summarize_counts(c, rate_hz)
-            f1 = 0.0 if s["event_f1"] != s["event_f1"] else s["event_f1"]
-            score = f1 + 1e-3 * 2 * c["tp"] / max(2 * c["tp"] + c["fp"] + c["fn"], 1)
-            if score > best:
-                best, best_pair = score, (float(th), float(pt))
-    return best_pair
+            raw = [(f > th) & (p > pt) for f, p in zip(fi, pw)]
+            for d in min_durs_s:
+                n = int(round(d * rate_hz))
+                score = _val_score(event_counts([postprocess(r, n) for r in raw], trues, rate_hz), rate_hz)
+                if score > best:
+                    best, best_pt = score, (float(th), float(pt), n)
+    return best_pt if len(min_durs_s) > 1 else best_pt[:2]

@@ -22,7 +22,10 @@ def daphnet_results_match(args, path: Path) -> bool:
     want = {"seeds": list(args.seeds), "epochs": args.epochs, "hidden": args.hidden,
             "tcn_layers": args.tcn_layers, "n_val": args.n_val, "window": args.window,
             "lr": args.lr, "online_history_s": args.online_history_s,
-            "recompute_stride": args.recompute_stride, "downsample": args.downsample}
+            "recompute_stride": args.recompute_stride, "downsample": args.downsample,
+            "features": getattr(args, "features", "raw"),
+            "augment_noise": float(getattr(args, "augment_noise", 0.0) or 0.0)}
+    m = {**{"features": "raw", "augment_noise": 0.0}, **m}       # results saved before these options
     return all(m.get(k) == v for k, v in want.items()) and list(res.get("models", [])) == list(args.models)
 
 

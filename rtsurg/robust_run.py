@@ -16,6 +16,7 @@ import torch
 from .calibration import calibration_report, fit_temperature, softmax
 from .daphnet import SAMPLING_HZ, load_daphnet, loso_splits
 from .data import Normalizer
+from .features import featurize
 from .fog import (event_counts, fi_scores, predict_logits, predict_logits_online_acausal,
                   select_fi_thresholds, select_threshold, summarize_counts)
 from .fog_run import FI_NAME
@@ -63,9 +64,12 @@ def _run_seed(args, seed: int, threads: int):
         # ---- faulted copies of the raw test signals (identical for all models) -------------
         ck0 = torch.load(out / "models" / f"{args.models[0]}_seed{seed}_{user}.pt", weights_only=False)
         norm = Normalizer(mean=ck0["norm_mean"], std=ck0["norm_std"])
+        feats = ck0["cfg"].get("features", "raw")
+        raw_std = np.asarray(ck0["cfg"].get("raw_std", ck0["norm_std"]))[:test[0].kinematics.shape[1]]
+        fz = lambda x: norm(featurize(x, feats, rate))      # faults hit the raw signal, features follow
         faulted = {}
         for ci, (kind, level) in enumerate(CONDITIONS):
-            faulted[(kind, level)] = [apply_fault(t.kinematics, kind, level, norm.std, rate,
+            faulted[(kind, level)] = [apply_fault(t.kinematics, kind, level, raw_std, rate,
                                                   np.random.default_rng([seed, fi_, ci, ti]))
                                       for ti, t in enumerate(test)]
         # ---- Freeze Index under faults ---------------------------------------------------
@@ -81,7 +85,7 @@ def _run_seed(args, seed: int, threads: int):
             ck = torch.load(out / "models" / f"{m}_seed{seed}_{user}.pt", weights_only=False)
             model = build_model(m, ck["cfg"]["n_features"], 2, ck["cfg"]["hidden"], ck["cfg"]["tcn_layers"])
             model.load_state_dict(ck["state"]); model.eval()
-            val_x = [norm(t.kinematics) for t in val]
+            val_x = [fz(t.kinematics) for t in val]
             lv = _logits(model, val_x, args, hist, stride)
             yv = np.concatenate(val_y)
             T = fit_temperature(np.concatenate(lv), yv)                      # validation only
@@ -98,7 +102,7 @@ def _run_seed(args, seed: int, threads: int):
             base = {"seed": seed, "fold": user, "model": m}
             clean_logits = None
             for (kind, level), raws in faulted.items():
-                lt = _logits(model, [norm(r) for r in raws], args, hist, stride)
+                lt = _logits(model, [fz(r) for r in raws], args, hist, stride)
                 pt_ = [softmax(l, T)[:, 1] for l in lt]
                 if kind == "clean":
                     clean_logits = np.concatenate(lt)
