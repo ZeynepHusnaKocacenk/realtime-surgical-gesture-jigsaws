@@ -3,6 +3,9 @@ results/*
 !results/deployment.md
 !results/deployment.json
 !results/deployment_latency.png
+!results/jigsaws_*/
+results/jigsaws_*_quick/
+results/jigsaws_*/synthetic_data/
 results/daphnet/models/
 results/daphnet/results_partial.json
 __pycache__/
