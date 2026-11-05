@@ -8,7 +8,7 @@ authors:
     affiliation: "Carleton University"
 repository-code: "https://github.com/ZeynepHusnaKocacenk/realtime-surgical-gesture-jigsaws"
 url: "https://zeynephusnakocacenk.github.io/realtime-surgical-gesture-jigsaws/"
-license: "NOASSERTION"
+license: MIT
 keywords:
   - freezing of gait
   - Parkinson's disease

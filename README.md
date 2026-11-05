@@ -336,6 +336,12 @@ tests/               50 tests
 * Y. Abu Farha, J. Gall. *MS-TCN: Multi-Stage Temporal Convolutional Network for Action Segmentation.* CVPR, 2019.
 * M. Mitchell et al. *Model Cards for Model Reporting.* FAT*, 2019.
 
+## License
+
+Code: [MIT](LICENSE). The datasets are not part of this repository and keep their own terms: Daphnet is
+CC BY 4.0 (UCI Machine Learning Repository); JIGSAWS is for non-commercial research and must not be
+redistributed. This is research software, provided as is, and is not a medical device.
+
 ## Author
 
 Zeynep Kocacenk, B.Sc. Computer Science (Psychology minor), Carleton University. This project extends my
